@@ -6,4 +6,4 @@
 - Github:https://github.com/wolf-es
 
 ## ⚡Acerca de Mis repositorios de Github
-[![Anurag's github stats](https://github-readme-stats.vercel.app/api?username=wolf-es)](https://github.com/wolf-es)
+[![Anurag's github stats](https://github-readme-stats.vercel.app/api?username=wolf-es&theme=dark)](https://github.com/wolf-es)
