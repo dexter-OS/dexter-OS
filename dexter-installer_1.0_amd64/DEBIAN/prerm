@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Script de pre-remoción para el instalador de DexterOS
+
+# Limpiar archivos temporales
+rm -rf /usr/share/dexter-installer/images
+rm -rf /usr/share/dexter-installer/flags
+rm -rf /usr/share/dexter-installer/locales
+rm -rf /usr/share/dexter-installer/maps
+
+# Fin del script
+exit 0

@@ -1,1 +1,9 @@
-
+Package: dexter-installer
+Version: 1.0
+Architecture: all
+Maintainer: Victor Oubiña <oubinav78@gmail.com>
+Depends: python3, python3-gi, gir1.2-gtk-3.0, parted, gdisk, cryptsetup, grub-pc | grub-efi-amd64, locales, tzdata, console-setup
+Section: admin
+Priority: optional
+Description: Instalador personalizado para DexterOS
+ Un instalador completo y personalizado para DexterOS.
