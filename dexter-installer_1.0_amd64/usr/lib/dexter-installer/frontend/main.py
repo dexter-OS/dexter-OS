@@ -23,7 +23,6 @@ from helpers.config import Config
 
 # Importar páginas
 from frontend.pages.welcome import WelcomePage
-from frontend.pages.language import LanguagePage
 from frontend.pages.timezone import TimezonePage
 
 class SingleInstanceChecker:
@@ -103,7 +102,6 @@ class DexterInstallerApp:
         # Definir los pasos (aunque no se muestren en la barra lateral)
         self.steps = [
             {"id": "welcome", "label": _("Bienvenida")},
-            {"id": "language", "label": _("Idioma")},
             {"id": "timezone", "label": _("Zona Horaria")},
             {"id": "keyboard", "label": _("Teclado")},
             {"id": "partition", "label": _("Particionado")},
@@ -125,13 +123,11 @@ class DexterInstallerApp:
         # Inicializar las páginas 
         self.pages = {
             "welcome": WelcomePage(self),
-            "language": LanguagePage(self),
             "timezone": TimezonePage(self)
         }
         
         # Añadir las páginas al stack
         self.stack.add_named(self.pages["welcome"].get_content(), "welcome")
-        self.stack.add_named(self.pages["language"].get_content(), "language")
         self.stack.add_named(self.pages["timezone"].get_content(), "timezone")
         
         # Botones de navegación
@@ -312,8 +308,6 @@ class DexterInstallerApp:
         current_page = None
         if current_page_id == "welcome":
             current_page = self.pages["welcome"]
-        elif current_page_id == "language":
-            current_page = self.pages["language"]
         elif current_page_id == "timezone":
             current_page = self.pages["timezone"]
         
@@ -370,7 +364,7 @@ class DexterInstallerApp:
             self.stack.set_visible_child_name(page_id)
             
             # Ocultar o mostrar el botón de retroceso según la página
-            if page_id in ["welcome", "language"]:
+            if page_id in ["welcome", "timezone"]:
                 self.back_button.hide()
             else:
                 self.back_button.show()
