@@ -289,50 +289,35 @@ class TimezonePage:
         # Información de idioma
         language_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         language_box.get_style_context().add_class("info-box")
-        language_box.set_margin_bottom(0)
+        language_box.set_margin_bottom(5)
         language_box.set_margin_top(5)
         
-        # Texto para el idioma basado en la detección
-        lang_text = self.get_language_display_text()
-        self.language_label = Gtk.Label(lang_text)
+        # Texto combinado para idioma y región
+        detected_lang = self.lang_manager.get_detected_language()
+        detected_variant = self.lang_manager.get_detected_variant()
+        if detected_lang and detected_variant:
+            display_text = f"El idioma y región del sistema: {detected_lang['name']} ({detected_variant['name']})"
+        else:
+            display_text = "El idioma y región del sistema: español de España (Castellano)"
+
+        self.language_label = Gtk.Label(display_text)
         self.language_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.25, 0.88, 0.82, 1.0))
         self.language_label.set_halign(Gtk.Align.START)
         self.language_label.set_hexpand(True)
-        
-        # Botón para cambiar idioma
-        change_language_button = Gtk.Button(label="Cambiar idioma...")
+     
+        # Un único botón para cambiar idioma y región
+        change_language_button = Gtk.Button(label="Cambiar idioma y región...")
         change_language_button.set_halign(Gtk.Align.END)
-        change_language_button.set_size_request(180, -1)
+        change_language_button.set_size_request(200, -1)
         change_language_button.connect("clicked", self.on_change_language_clicked)
         
+        # Añadir elementos al language_box
         language_box.pack_start(self.language_label, True, True, 0)
         language_box.pack_end(change_language_button, False, False, 0)
         
-        # Información de localización
-        locale_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        locale_box.get_style_context().add_class("info-box")
-        locale_box.set_margin_top(0)
-        
-        # Texto para la localización basado en la detección
-        locale_text = self.get_locale_display_text()
-        self.locale_label = Gtk.Label(locale_text)
-        self.locale_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.25, 0.88, 0.82, 1.0))
-        self.locale_label.set_halign(Gtk.Align.START)
-        self.locale_label.set_hexpand(True)
-        
-        # Botón para cambiar localización (abre el mismo selector de idiomas)
-        change_locale_button = Gtk.Button(label="Cambiar región...")
-        change_locale_button.set_halign(Gtk.Align.END)
-        change_locale_button.set_size_request(180, -1)
-        change_locale_button.connect("clicked", self.on_change_locale_clicked)
-        
-        locale_box.pack_start(self.locale_label, True, True, 0)
-        locale_box.pack_end(change_locale_button, False, False, 0)
-        
-        # Añadir los componentes al contenedor inferior
+        # Añadir language_box al bottom_box
         bottom_box.pack_start(language_box, False, False, 0)
-        bottom_box.pack_start(locale_box, False, False, 0)
-        
+
         # Añadir el contenedor inferior al contenido principal
         self.content.pack_start(bottom_box, False, False, 0)
         
