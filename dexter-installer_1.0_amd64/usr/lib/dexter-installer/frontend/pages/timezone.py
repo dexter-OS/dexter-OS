@@ -18,8 +18,8 @@ import json
 
 # Constantes para el mapa
 MAP_FILE_PNG = '/usr/share/dexter-installer/maps/miller.png'
-MAP_SIZE = (752, 384)
-MAP_CENTER = (382, 205)
+MAP_SIZE = (600, 306)
+MAP_CENTER = (300, 153)
 
 # Añadir la ruta para importar el gestor de idiomas
 sys.path.insert(0, '/usr/lib/dexter-installer')
@@ -79,94 +79,9 @@ class TimezonePage:
         if not hasattr(app.setup, 'locale'):
             app.setup.locale = self.default_locale
         
-        # Configurar CSS
+        # Cargar el CSS externo
         css_provider = Gtk.CssProvider()
-        css_provider.load_from_data("""
-            .title-header {
-                background-color: #212836;
-            }
-            .label-text {
-                color: #E0B0FF; /* Lavanda claro para combinar con el mapa */
-            }
-            /* Quitar cualquier borde rojo residual */
-            * {
-                border-color: transparent
-            }
-            button, combobox, box, window, dialog {
-                border: none
-            }
-            combobox * {
-                border: none;
-            }
-            .region-label {
-                color: #E0B0FF;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            .time-label {
-                color: #E0B0FF;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            combobox {
-                color: white;
-                min-height: 22px;
-                padding: 2px;
-            }
-            combobox button {
-                border-radius: 4px;
-                border: none;
-            }
-            combobox arrow {
-                color: #9370DB;
-                border: none;
-            }
-            combobox menu {
-                background-color: rgba(40, 40, 40, 0.95);
-                border: 1px solid #9370DB;
-                border-radius: 10px;
-            }
-            combobox menu menuitem {
-                color: #E0B0FF;
-                padding: 6px 8px;
-                border-radius: 10px;
-            }
-            combobox menu menuitem:hover {
-                background-color: rgba(147, 112, 219, 0.4);
-                border-radius: 10px;
-            }
-            button {
-                border-radius: 10px;
-                padding: 6px 10px;
-                border: 1px solid #9370DB;
-                background-color: rgba(40, 40, 40, 0.8);
-                color: white;
-            }
-            button:hover {
-                background-color: rgba(60, 60, 60, 0.8);
-            }
-            .selector-box {
-                padding: 10px;
-                border-radius: 10px;
-            }
-            .timezone-box {
-                background-color: rgba(30, 30, 30, 0.8);
-                border-radius: 8px;
-                padding: 8px;
-                border: 1px solid #9370DB;
-            }
-            .info-box {
-                background-color: rgba(30, 30, 30, 0.8);
-                padding: 6px 10px;
-            }
-            .language-selector-dialog {
-                background-color: #212836;
-                color: white;
-            }
-            .language-selector-dialog label {
-                color: white;
-            }
-        """.encode('utf-8'))
+        css_provider.load_from_path('/usr/share/dexter-installer/styles/style.css')
         
         # Aplicar el proveedor CSS
         screen = Gdk.Screen.get_default()
@@ -176,6 +91,7 @@ class TimezonePage:
         # Crear el contenedor principal
         self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.content.set_margin_bottom(15)
+        self.content.set_size_request(850, 500)  # Establecer límite explícito de tamaño
         
         # Título de la página
         title_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
@@ -256,13 +172,23 @@ class TimezonePage:
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file(map_path)
                 # Ajustar el mapa al tamaño adecuado manteniendo la proporción
                 screen_width = Gdk.Screen.get_default().get_width()
-                target_width = min(752, screen_width - 30)  # Ancho máximo con margen
+                target_width = 600  # Ancho máximo con margen
                 target_height = int(target_width * pixbuf.get_height() / pixbuf.get_width())
+                
+                # Limitar también la altura para que no haga la ventana más alta
+                max_height = 300  # Altura máxima permitida
+                if target_height > max_height:
+                    target_height = max_height
+                    target_width = int(max_height * pixbuf.get_width() / pixbuf.get_height())
+                    
                 scaled_pixbuf = pixbuf.scale_simple(target_width, target_height, GdkPixbuf.InterpType.BILINEAR)
                 map_image.set_from_pixbuf(scaled_pixbuf)
+                
+                # No expandir más allá del tamaño asignado
+                map_image.set_size_request(target_width, target_height)
 
             # Añadir la imagen directamente al contenido
-            self.content.pack_start(map_image, True, True, 0)
+            self.content.pack_start(map_image, False, False, 0)
         except Exception as e:
             print(f"Error cargando el mapa: {e}")
            
@@ -805,3 +731,4 @@ class TimezonePage:
         if hasattr(self.app, 'setup') and hasattr(self.app.setup, 'timezone'):
             return self.app.setup.timezone
         return self.default_timezone
+

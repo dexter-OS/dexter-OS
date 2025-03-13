@@ -33,7 +33,7 @@ class WelcomePage:
         style_context.add_provider_for_screen(screen, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         
         # Crear el contenedor principal
-        self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         self.content.set_margin_bottom(15)
         
         # Guardar los márgenes originales
@@ -59,7 +59,7 @@ class WelcomePage:
         title.set_margin_bottom(10)
         
         title_container.add(title)
-        self.content.pack_start(title_container, False, True, 0)
+        self.content.pack_start(title_container, True, True, 0)
         
         # Restaurar los márgenes para el resto del contenido
         self.content.set_margin_start(original_margin_start)
@@ -71,6 +71,7 @@ class WelcomePage:
             _("Este asistente le guiará en la instalación del sistema operativo DexterOS en su equipo.")))
         subtitle.set_halign(Gtk.Align.CENTER)
         subtitle.set_line_wrap(True)
+        subtitle.set_margin_top(10)
         subtitle.set_margin_bottom(20)
         self.content.pack_start(subtitle, False, False, 0)
         
@@ -79,7 +80,7 @@ class WelcomePage:
             image_path = os.path.join('/usr/share/dexter-installer/images', 'welcome.png')
             if os.path.exists(image_path):
                 # Reducimos el tamaño del logo a 300x187 para adaptarlo a la ventana más pequeña
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(image_path, 300, 187, True)
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(image_path, 280, 160, True)
                 image = Gtk.Image.new_from_pixbuf(pixbuf)
             else:
                 # Crear una imagen de placeholder si no existe el archivo
@@ -93,7 +94,7 @@ class WelcomePage:
         
         # Información adicional
         info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        info_box.set_margin_top(120)
+        info_box.set_margin_top(40)
         info_box.set_margin_start(30)  # Añadir margen adicional izquierdo
         self.content.pack_start(info_box, True, True, 0)
         
@@ -113,7 +114,7 @@ class WelcomePage:
         ]
         
         # Crear un contenedor para las dos columnas
-        columns_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=100)
+        columns_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=60)
         columns_box.set_halign(Gtk.Align.CENTER)
         columns_box.set_margin_start(10)
         info_box.pack_start(columns_box, False, False, 5)
@@ -167,6 +168,9 @@ class WelcomePage:
         note_label.set_margin_bottom(20)
         note_label.set_line_wrap(True)
         info_box.pack_start(note_label, False, False, 0)
+        
+        # Limitar altura total
+        self.content.set_size_request(-1, 500)  # Forzar altura máxima de 500
     
     def get_content(self):
         """Retorna el contenido de la página"""
