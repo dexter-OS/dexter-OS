@@ -91,7 +91,7 @@ class TimezonePage:
         # Crear el contenedor principal
         self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.content.set_margin_bottom(15)
-        self.content.set_size_request(850, 500)  # Establecer límite explícito de tamaño
+        self.content.set_size_request(850, 300)  # Establecer límite explícito de tamaño
         
         # Título de la página
         title_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
@@ -145,14 +145,14 @@ class TimezonePage:
         region_label = Gtk.Label("Región:")
         region_label.get_style_context().add_class("label-text")
         self.region_combo = Gtk.ComboBoxText()
-        self.region_combo.set_size_request(200, -1)
+        self.region_combo.set_size_request(350, -1)
         self.region_combo.get_style_context().add_class("region-combo")
         
         # Selector de zona
         zone_label = Gtk.Label("Zona:")
         zone_label.get_style_context().add_class("label-text")
         self.zone_combo = Gtk.ComboBoxText()
-        self.zone_combo.set_size_request(200, -1)
+        self.zone_combo.set_size_request(350, -1)
         self.zone_combo.get_style_context().add_class("zone-combo")
         
         # Añadir componentes al selector_box
@@ -172,11 +172,11 @@ class TimezonePage:
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file(map_path)
                 # Ajustar el mapa al tamaño adecuado manteniendo la proporción
                 screen_width = Gdk.Screen.get_default().get_width()
-                target_width = 600  # Ancho máximo con margen
+                target_width = 800  # Ancho máximo con margen
                 target_height = int(target_width * pixbuf.get_height() / pixbuf.get_width())
                 
                 # Limitar también la altura para que no haga la ventana más alta
-                max_height = 300  # Altura máxima permitida
+                max_height = 250  # Altura máxima permitida
                 if target_height > max_height:
                     target_height = max_height
                     target_width = int(max_height * pixbuf.get_width() / pixbuf.get_height())
