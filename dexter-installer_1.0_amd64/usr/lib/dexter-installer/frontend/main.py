@@ -24,7 +24,7 @@ from helpers.config import Config
 
 # Importar páginas
 from frontend.pages.welcome import WelcomePage
-#from frontend.pages.timezone import TimezonePage
+from frontend.pages.timezone import TimezonePage
 #from frontend.pages.keyboard import KeyboardPage
 
 class SingleInstanceApp:
@@ -155,11 +155,13 @@ class DexterInstallerApp:
         
         # Inicializar las páginas 
         self.pages = {
-            "welcome": WelcomePage(self)
+            "welcome": WelcomePage(self),
+            "timezone": TimezonePage(self)
         }
         
         # Añadir las páginas al stack
         self.stack.add_named(self.pages["welcome"].get_content(), "welcome")
+        self.stack.add_named(self.pages["timezone"].get_content(), "timezone")
         
         # Crear un box para los botones con fondo personalizado
         self.button_background = Gtk.EventBox()
@@ -289,7 +291,9 @@ class DexterInstallerApp:
         current_page = None
         if current_page_id == "welcome":
             current_page = self.pages["welcome"]
-        
+        elif current_page_id == "timezone":
+            current_page = self.pages["timezone"]
+            
         # Validar la página actual
         if current_page and hasattr(current_page, 'validate') and not current_page.validate():
             # Mostrar un mensaje de error si la validación falla
