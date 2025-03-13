@@ -25,7 +25,6 @@ from helpers.config import Config
 # Importar páginas
 from frontend.pages.welcome import WelcomePage
 from frontend.pages.timezone import TimezonePage
-from frontend.pages.keyboard import KeyboardPage
 
 class SingleInstanceApp:
     """Clase para asegurar que solo se ejecuta una instancia de la aplicación"""
@@ -92,11 +91,14 @@ class DexterInstallerApp:
         # Crear la ventana principal
         self.window = Gtk.Window(title=_("Instalador de DexterOS"))
         # Tamaño reducido
-        self.window.set_default_size(850, 450)
-        self.window.set_size_request(850, 450)
+        self.window.set_default_size(850, 500)
+        self.window.set_size_request(850, 500)
         self.window.set_position(Gtk.WindowPosition.CENTER)
         self.window.set_resizable(False)
         self.window.connect("delete-event", self.on_close)
+        
+        # Añadir también esta línea para forzar el tamaño
+        self.window.resize(850, 500)
         
         # Quitar la decoración de la ventana (barra de título y botones)
         self.window.set_decorated(False)
@@ -154,13 +156,11 @@ class DexterInstallerApp:
         self.pages = {
             "welcome": WelcomePage(self),
             "timezone": TimezonePage(self),
-            "keyboard": KeyboardPage(self)
         }
         
         # Añadir las páginas al stack
         self.stack.add_named(self.pages["welcome"].get_content(), "welcome")
         self.stack.add_named(self.pages["timezone"].get_content(), "timezone")
-        self.stack.add_named(self.pages["keyboard"].get_content(), "keyboard")
         
         # Crear un box para los botones con fondo personalizado
         self.button_background = Gtk.EventBox()
@@ -245,7 +245,7 @@ class DexterInstallerApp:
         return False  # Permitir dibujado de widgets hijo
     
     def on_close(self, widget, event):
-        """Manejador para el cierre de la ventana"""
+        """Manejador para el cierre de la ventana"""  
         dialog = Gtk.MessageDialog(
             transient_for=self.window,
             flags=0,
@@ -287,8 +287,6 @@ class DexterInstallerApp:
             current_page = self.pages["welcome"]
         elif current_page_id == "timezone":
             current_page = self.pages["timezone"]
-        elif current_page_id == "keyboard":
-            current_page = self.pages["keyboard"]
         
         # Validar la página actual
         if current_page and hasattr(current_page, 'validate') and not current_page.validate():
