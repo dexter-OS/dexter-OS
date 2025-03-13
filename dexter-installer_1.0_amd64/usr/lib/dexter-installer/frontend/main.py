@@ -24,7 +24,8 @@ from helpers.config import Config
 
 # Importar páginas
 from frontend.pages.welcome import WelcomePage
-from frontend.pages.timezone import TimezonePage
+#from frontend.pages.timezone import TimezonePage
+#from frontend.pages.keyboard import KeyboardPage
 
 class SingleInstanceApp:
     """Clase para asegurar que solo se ejecuta una instancia de la aplicación"""
@@ -154,13 +155,11 @@ class DexterInstallerApp:
         
         # Inicializar las páginas 
         self.pages = {
-            "welcome": WelcomePage(self),
-            "timezone": TimezonePage(self),
+            "welcome": WelcomePage(self)
         }
         
         # Añadir las páginas al stack
         self.stack.add_named(self.pages["welcome"].get_content(), "welcome")
-        self.stack.add_named(self.pages["timezone"].get_content(), "timezone")
         
         # Crear un box para los botones con fondo personalizado
         self.button_background = Gtk.EventBox()
@@ -245,7 +244,10 @@ class DexterInstallerApp:
         return False  # Permitir dibujado de widgets hijo
     
     def on_close(self, widget, event):
-        """Manejador para el cierre de la ventana"""  
+        """Manejador para el cierre de la ventana"""
+        # Obtener el tamaño actual de la ventana
+        current_width, current_height = self.window.get_size()
+        
         dialog = Gtk.MessageDialog(
             transient_for=self.window,
             flags=0,
@@ -253,13 +255,15 @@ class DexterInstallerApp:
             buttons=Gtk.ButtonsType.YES_NO,
             text=_("¿Está seguro que desea salir?")
         )
-        dialog.format_secondary_text(_("La instalación no se ha completado."))
+        dialog.format_secondary_text(_("La instalación no se ha completado.\nTamaño actual de la ventana: {}x{}").format(
+            current_width, current_height))
         response = dialog.run()
         
         if response == Gtk.ResponseType.YES:
             dialog.destroy()
             # Liberar el bloqueo antes de salir
             self.single_instance.release_lock()
+            print(f"Tamaño final de la ventana: {current_width}x{current_height}")
             Gtk.main_quit()
             return False
         else:
@@ -285,8 +289,6 @@ class DexterInstallerApp:
         current_page = None
         if current_page_id == "welcome":
             current_page = self.pages["welcome"]
-        elif current_page_id == "timezone":
-            current_page = self.pages["timezone"]
         
         # Validar la página actual
         if current_page and hasattr(current_page, 'validate') and not current_page.validate():
