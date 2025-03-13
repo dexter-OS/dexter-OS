@@ -1,1 +1,41 @@
+/* Estilos globales */
+window {
+    background-color: #1e1e1e;
+}
 
+/* Esquinas redondeadas para la ventana principal */
+decoration {
+    border-radius: 30px;
+}
+
+/* Estilo para el encabezado de título con esquinas redondeadas */
+.title-header {
+    background-color: #212836;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+}
+
+/* Ajustes generales para todos los labels para asegurar visibilidad */
+label {
+    color: #40E0D0;
+}
+
+/* Estilo para el fondo de los botones */
+.button-background {
+    background-color: #212836;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+/* Botones */
+button {
+    border-radius: 10px;
+    padding: 6px 10px;
+    border: 1px solid #9370DB;
+    background-color: rgba(40, 40, 40, 0.8);
+    color: white;
+}
+
+button:hover {
+    background-color: rgba(60, 60, 60, 0.8);
+}
