@@ -11,7 +11,13 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib, GdkPixbuf
 import subprocess
 import os
+import sys
 import time
+import locale
+
+# Añadir la ruta para importar el gestor de idiomas
+sys.path.insert(0, '/usr/lib/dexter-installer')
+from helpers.language_manager import LanguageManager
 
 class TimezonePage:
     """Página de selección de zona horaria - Versión mejorada con mapa estático"""
@@ -19,7 +25,12 @@ class TimezonePage:
     def __init__(self, app):
         """Inicializa la página de zona horaria"""
         self.app = app
-        self.current_region = "Europe"
+        
+        # Inicializar gestor de idiomas
+        self.lang_manager = LanguageManager()
+        
+        # Obtener la configuración de idioma y zona horaria detectados
+        self.detect_system_locale_and_timezone()
         
         # Establecer zona horaria predeterminada
         class Setup:
@@ -27,9 +38,16 @@ class TimezonePage:
         if not hasattr(app, 'setup'):
             app.setup = Setup()
         
-        # Asegurarnos de que la zona horaria esté establecida correctamente
+        # Configurar idioma y zona horaria en la configuración de la app
         if not hasattr(app.setup, 'timezone') or app.setup.timezone is None:
-            app.setup.timezone = "Europe/Madrid"
+            app.setup.timezone = self.default_timezone
+        
+        # Configuración de idioma y región
+        if not hasattr(app.setup, 'language'):
+            app.setup.language = self.default_language
+            
+        if not hasattr(app.setup, 'locale'):
+            app.setup.locale = self.default_locale
         
         # Configurar CSS
         css_provider = Gtk.CssProvider()
@@ -39,6 +57,16 @@ class TimezonePage:
             }
             .label-text {
                 color: #E0B0FF; /* Lavanda claro para combinar con el mapa */
+            }
+            /* Quitar cualquier borde rojo residual */
+            * {
+                border-color: transparent
+            }
+            button, combobox, box, window, dialog {
+                border: none
+            }
+            combobox * {
+                border: none;
             }
             .region-label {
                 color: #E0B0FF;
@@ -61,6 +89,7 @@ class TimezonePage:
             }
             combobox arrow {
                 color: #9370DB;
+                border: none;
             }
             combobox menu {
                 background-color: rgba(40, 40, 40, 0.95);
@@ -95,11 +124,17 @@ class TimezonePage:
                 border-radius: 8px;
                 padding: 12px;
                 border: 1px solid #9370DB; /* Color púrpura que combina con el mapa */
-                margin-top: 20px;
             }
             .info-box {
                 background-color: rgba(30, 30, 30, 0.8);
                 padding: 6px 10px;
+            }
+            .language-selector-dialog {
+                background-color: #212836;
+                color: white;
+            }
+            .language-selector-dialog label {
+                color: white;
             }
         """.encode('utf-8'))
         
@@ -109,8 +144,8 @@ class TimezonePage:
         style_context.add_provider_for_screen(screen, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         
         # Crear el contenedor principal
-        self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        self.content.set_margin_bottom(15)
+        self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.content.set_margin_bottom(5)
         
         # Título de la página
         title_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
@@ -151,8 +186,38 @@ class TimezonePage:
         title_container.pack_start(title_labels, False, False, 0)
         self.content.pack_start(title_container, False, False, 0)
         
-        # Contenedor principal para el mapa y selectores
-        main_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        # Selector de región y zona al inicio (encima del mapa)
+        selector_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        selector_box.set_halign(Gtk.Align.CENTER)
+        selector_box.set_margin_top(5)
+        selector_box.set_margin_bottom(5)
+        selector_box.get_style_context().add_class("selector-box")
+        
+        # Selector de región
+        region_label = Gtk.Label("Región:")
+        region_label.get_style_context().add_class("label-text")
+        self.region_combo = Gtk.ComboBoxText()
+        self.region_combo.set_size_request(200, -1)
+        self.region_combo.get_style_context().add_class("region-combo")
+        
+        # Selector de zona
+        zone_label = Gtk.Label("Zona:")
+        zone_label.get_style_context().add_class("label-text")
+        self.zone_combo = Gtk.ComboBoxText()
+        self.zone_combo.set_size_request(200, -1)
+        self.zone_combo.get_style_context().add_class("zone-combo")
+        
+        # Añadir componentes al selector_box
+        selector_box.pack_start(region_label, False, False, 5)
+        selector_box.pack_start(self.region_combo, False, False, 0)
+        selector_box.pack_start(zone_label, False, False, 5)
+        selector_box.pack_start(self.zone_combo, False, False, 0)
+        
+        # Añadir el selector al principio del contenido
+        self.content.pack_start(selector_box, False, False, 0)
+        
+        # Contenedor principal para el mapa
+        main_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         main_content.set_hexpand(True)
         main_content.set_vexpand(True)
         
@@ -161,75 +226,52 @@ class TimezonePage:
         
         map_image = Gtk.Image()
         try:
-            # Intentar cargar el mapa
+            # Intentar cargar el mapa - versión reducida
             if os.path.exists(map_path):
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file(map_path)
-                # Ajustar el mapa al tamaño adecuado manteniendo la proporción
+                # Ajustar el mapa a un tamaño más pequeño
                 screen_width = Gdk.Screen.get_default().get_width()
-                target_width = min(900, screen_width - 40)  # Ancho máximo con margen
-                target_height = int(target_width * pixbuf.get_height() / pixbuf.get_width())
+                target_width = min(800, screen_width - 40)
+                # Reducido para ocupar menos espacio vertical
+                target_height = int(target_width * pixbuf.get_height() / pixbuf.get_width() * 0.7)
                 scaled_pixbuf = pixbuf.scale_simple(target_width, target_height, GdkPixbuf.InterpType.BILINEAR)
                 map_image.set_from_pixbuf(scaled_pixbuf)
             else:
                 print("No se encontró el mapa, usando un fallback")
-                # Crear un rectángulo negro como último recurso
-                pixbuf = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 800, 400)
+                # Crear un rectángulo como último recurso - más pequeño
+                pixbuf = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 800, 300)
                 pixbuf.fill(0x000000FF)  # Negro con alpha 1.0
                 map_image.set_from_pixbuf(pixbuf)
         except Exception as e:
             print(f"Error cargando el mapa: {e}")
-            # Crear un rectángulo negro como último recurso
-            pixbuf = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 800, 400)
+            # Fallback más pequeño
+            pixbuf = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 800, 300)
             pixbuf.fill(0x000000FF)  # Negro con alpha 1.0
             map_image.set_from_pixbuf(pixbuf)
         
-        # Crear un contenedor para superponer elementos sobre el mapa
-        map_overlay = Gtk.Overlay()
-        map_overlay.add(map_image)
+        # Añadir el mapa al contenido
+        main_content.pack_start(map_image, True, True, 0)
         
-        # Añadir el overlay al contenido principal
-        main_content.pack_start(map_overlay, True, True, 0)
+        # Añadir el contenido principal
+        self.content.pack_start(main_content, True, True, 0)
         
-        # Selector de región y zona (ajuste de posición más arriba y más estrechos)
-        selector_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        selector_box.set_halign(Gtk.Align.CENTER)
-        selector_box.set_valign(Gtk.Align.CENTER)
-        selector_box.set_margin_bottom(350)  # Subir los selectores más arriba del centro
-        selector_box.get_style_context().add_class("selector-box")
-        selector_box.set_hexpand(True)
+        # Contenedor inferior para el reloj y los botones de cambiar
+        bottom_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        bottom_box.set_margin_top(5)
+        bottom_box.set_margin_start(10)
+        bottom_box.set_margin_end(10)
+        bottom_box.set_margin_bottom(5)
         
-        # Selector de región
-        region_label = Gtk.Label("Región:")
-        region_label.get_style_context().add_class("label-text")
-        self.region_combo = Gtk.ComboBoxText()
-        self.region_combo.set_size_request(300, -1)  # Reducir el ancho
-        
-        # Selector de zona
-        zone_label = Gtk.Label("Zona:")
-        zone_label.get_style_context().add_class("label-text")
-        self.zone_combo = Gtk.ComboBoxText()
-        self.zone_combo.set_size_request(300, -1)  # Reducir el ancho
-        
-        # Añadir componentes al selector_box
-        selector_box.pack_start(region_label, False, False, 5)
-        selector_box.pack_start(self.region_combo, False, False, 0)
-        selector_box.pack_start(zone_label, False, False, 5)
-        selector_box.pack_start(self.zone_combo, False, False, 0)
-        
-        # Añadir el selector como overlay sobre el mapa
-        map_overlay.add_overlay(selector_box)
-        
-        # Contenedor para mostrar la zona horaria seleccionada
+        # Contenedor para mostrar la zona horaria seleccionada (reloj)
         timezone_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
         timezone_box.set_halign(Gtk.Align.CENTER)
-        timezone_box.set_valign(Gtk.Align.END)
         timezone_box.get_style_context().add_class("timezone-box")
-        timezone_box.set_margin_bottom(15)
-        timezone_box.set_size_request(280, -1)  # Ancho más estrecho
+        timezone_box.set_margin_bottom(5)
+        timezone_box.set_size_request(280, -1)
         
         # Etiqueta para la zona horaria
         self.timezone_label = Gtk.Label()
-        self.timezone_label.set_markup("<span color='white' size='large' weight='bold'>Europe/Madrid</span>")
+        self.timezone_label.set_markup(f"<span color='white' size='large' weight='bold'>{self.default_timezone}</span>")
         self.timezone_label.get_style_context().add_class("region-label")
         
         # Etiqueta para la hora actual
@@ -241,57 +283,53 @@ class TimezonePage:
         timezone_box.pack_start(self.timezone_label, False, False, 0)
         timezone_box.pack_start(self.time_label, False, False, 0)
         
-        # Añadir la caja de timezone como overlay
-        map_overlay.add_overlay(timezone_box)
+        # Añadir el reloj al contenedor inferior
+        bottom_box.pack_start(timezone_box, False, False, 0)
         
-        # Añadir el contenido principal
-        self.content.pack_start(main_content, True, True, 0)
-        
-        # Estilizar los botones del pie de página
-        bottom_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        bottom_box.set_margin_top(10)
-        bottom_box.set_margin_start(10)
-        bottom_box.set_margin_end(10)
-        bottom_box.set_margin_bottom(5)
-        
-        # Información de idioma con estilo mejorado
+        # Información de idioma
         language_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         language_box.get_style_context().add_class("info-box")
-        language_box.set_margin_bottom(2)
+        language_box.set_margin_bottom(0)
+        language_box.set_margin_top(5)
         
-        self.language_label = Gtk.Label("El idioma del sistema se establecerá a español de España (España).")
+        # Texto para el idioma basado en la detección
+        lang_text = self.get_language_display_text()
+        self.language_label = Gtk.Label(lang_text)
         self.language_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.25, 0.88, 0.82, 1.0))
         self.language_label.set_halign(Gtk.Align.START)
         self.language_label.set_hexpand(True)
         
-        # Botones "Cambiar..." un poco más largos
-        change_language_button = Gtk.Button(label="Cambiar...")
+        # Botón para cambiar idioma
+        change_language_button = Gtk.Button(label="Cambiar idioma...")
         change_language_button.set_halign(Gtk.Align.END)
-        change_language_button.set_size_request(150, -1)  # Aumentar ancho del botón
+        change_language_button.set_size_request(180, -1)
         change_language_button.connect("clicked", self.on_change_language_clicked)
         
         language_box.pack_start(self.language_label, True, True, 0)
         language_box.pack_end(change_language_button, False, False, 0)
         
-        # Información de localización con estilo mejorado
+        # Información de localización
         locale_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         locale_box.get_style_context().add_class("info-box")
-        locale_box.set_margin_top(5)
+        locale_box.set_margin_top(0)
         
-        self.locale_label = Gtk.Label("La localización de números y fechas se establecerá a español de España (España).")
-        self.language_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.25, 0.88, 0.82, 1.0))
+        # Texto para la localización basado en la detección
+        locale_text = self.get_locale_display_text()
+        self.locale_label = Gtk.Label(locale_text)
+        self.locale_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.25, 0.88, 0.82, 1.0))
         self.locale_label.set_halign(Gtk.Align.START)
         self.locale_label.set_hexpand(True)
         
-        change_locale_button = Gtk.Button(label="Cambiar...")
+        # Botón para cambiar localización (abre el mismo selector de idiomas)
+        change_locale_button = Gtk.Button(label="Cambiar región...")
         change_locale_button.set_halign(Gtk.Align.END)
-        change_locale_button.set_size_request(150, -1)  # Aumentar ancho del botón
+        change_locale_button.set_size_request(180, -1)
         change_locale_button.connect("clicked", self.on_change_locale_clicked)
         
         locale_box.pack_start(self.locale_label, True, True, 0)
         locale_box.pack_end(change_locale_button, False, False, 0)
         
-        # Añadir al contenedor inferior
+        # Añadir los componentes al contenedor inferior
         bottom_box.pack_start(language_box, False, False, 0)
         bottom_box.pack_start(locale_box, False, False, 0)
         
@@ -310,6 +348,91 @@ class TimezonePage:
         
         # Actualizar la hora periódicamente
         GLib.timeout_add_seconds(1, self.update_time_label)
+    
+    def detect_system_locale_and_timezone(self):
+        """Detecta el idioma del sistema y la zona horaria adecuada"""
+        # Valores predeterminados por si falla la detección
+        self.default_region = "Europe"
+        self.default_zone = "Madrid"
+        self.default_timezone = "Europe/Madrid"
+        self.default_language = "es"
+        self.default_locale = "es_ES"
+        
+        # Obtener el idioma detectado del sistema mediante el gestor de idiomas
+        detected_lang = self.lang_manager.get_detected_language()
+        detected_variant = self.lang_manager.get_detected_variant()
+        
+        if detected_lang and detected_variant:
+            # Actualizar los valores con lo detectado
+            self.default_language = detected_lang["code"]
+            self.default_locale = detected_variant["code"]
+            
+            # Si tiene zona horaria asociada, usarla
+            if "timezone" in detected_variant:
+                self.default_timezone = detected_variant["timezone"]
+                if "/" in self.default_timezone:
+                    parts = self.default_timezone.split("/")
+                    self.default_region = parts[0]
+                    self.default_zone = parts[1].replace("_", " ")
+            
+            print(f"Detectado: idioma={self.default_language}, locale={self.default_locale}, timezone={self.default_timezone}")
+        else:
+            # Intentar detectar zona horaria directamente del sistema como fallback
+            try:
+                # Usar el comando timedatectl en sistemas Linux
+                result = subprocess.run(["timedatectl", "status"], 
+                                     capture_output=True, text=True, check=False)
+                
+                if result.returncode == 0:
+                    for line in result.stdout.splitlines():
+                        if "Time zone:" in line:
+                            timezone = line.split("Time zone:")[1].strip().split()[0]
+                            if '/' in timezone:  # Verificar formato Region/Zone
+                                self.default_timezone = timezone
+                                region, zone = timezone.split('/', 1)
+                                self.default_region = region
+                                self.default_zone = zone.replace('_', ' ')
+                                print(f"Detectada zona horaria del sistema: {timezone}")
+                                return
+            except Exception as e:
+                print(f"Error al detectar zona horaria con timedatectl: {e}")
+            
+            # Si no se pudo obtener con timedatectl, intentar con /etc/timezone
+            try:
+                with open('/etc/timezone', 'r') as f:
+                    timezone = f.read().strip()
+                    if timezone and '/' in timezone:
+                        self.default_timezone = timezone
+                        region, zone = timezone.split('/', 1)
+                        self.default_region = region
+                        self.default_zone = zone.replace('_', ' ')
+                        print(f"Detectada zona horaria desde /etc/timezone: {timezone}")
+            except Exception as e:
+                print(f"Error al leer /etc/timezone: {e}")
+    
+    def get_language_display_text(self):
+        """Obtiene el texto a mostrar para el idioma detectado"""
+        # Obtener el nombre del idioma y variante para mostrarlo
+        detected_lang = self.lang_manager.get_detected_language()
+        detected_variant = self.lang_manager.get_detected_variant()
+        
+        if detected_lang and detected_variant:
+            return f"El idioma del sistema se establecerá a {detected_lang['name']} ({detected_variant['name']})."
+        else:
+            # Valores por defecto si no se pudo detectar
+            return "El idioma del sistema se establecerá a español de España (España)."
+    
+    def get_locale_display_text(self):
+        """Obtiene el texto a mostrar para la localización detectada"""
+        # Obtener el nombre del idioma y variante para mostrarlo
+        detected_lang = self.lang_manager.get_detected_language()
+        detected_variant = self.lang_manager.get_detected_variant()
+        
+        if detected_lang and detected_variant:
+            return f"La localización de números y fechas se establecerá a {detected_lang['name']} ({detected_variant['name']})."
+        else:
+            # Valores por defecto si no se pudo detectar
+            return "La localización de números y fechas se establecerá a español de España (España)."
     
     def init_timezones(self):
         """Inicializa los datos de zonas horarias"""
@@ -335,16 +458,27 @@ class TimezonePage:
         for region in region_names:
             self.region_combo.append_text(region)
         
-        # Seleccionar Europa por defecto
+        # Seleccionar la región detectada por defecto
+        region_found = False
         for i, region in enumerate(region_names):
-            if region == "Europe":
+            if region == self.default_region:
                 self.region_combo.set_active(i)
-                self.current_region = "Europe"
-                # Rellenar las zonas para Europa
-                self.populate_zones_for_region("Europe")
+                self.current_region = self.default_region
+                # Rellenar las zonas para esta región
+                self.populate_zones_for_region(self.default_region, self.default_zone)
+                region_found = True
                 break
+        
+        # Si no se encontró la región detectada, usar Europa como fallback
+        if not region_found and 'Europe' in region_names:
+            for i, region in enumerate(region_names):
+                if region == 'Europe':
+                    self.region_combo.set_active(i)
+                    self.current_region = 'Europe'
+                    self.populate_zones_for_region('Europe', 'Madrid')
+                    break
     
-    def populate_zones_for_region(self, region):
+    def populate_zones_for_region(self, region, default_zone=None):
         """Rellena el selector de zonas para una región específica"""
         # Limpiar el selector de zonas
         self.zone_combo.remove_all()
@@ -356,12 +490,38 @@ class TimezonePage:
         for zone in zones:
             self.zone_combo.append_text(zone)
         
-        # Seleccionar Madrid por defecto si estamos en Europe
-        if region == "Europe":
-            for i, zone in enumerate(zones):
-                if zone == "Madrid":
-                    self.zone_combo.set_active(i)
-                    break
+        # Seleccionar una zona predeterminada según la región
+        if len(zones) > 0:
+            # Si hay una zona predeterminada específica pasada como parámetro
+            if default_zone and default_zone in zones:
+                # Seleccionar la zona predeterminada proporcionada
+                for i, zone in enumerate(zones):
+                    if zone == default_zone:
+                        self.zone_combo.set_active(i)
+                        return
+            
+            # Si no hay zona predeterminada específica o no se encontró, usar el mapeo general
+            default_zones = {
+                "Europe": "Madrid",
+                "America": "New York",
+                "Asia": "Tokyo",
+                "Africa": "Cairo",
+                "Australia": "Sydney",
+                "Pacific": "Honolulu"
+            }
+            
+            # Conseguir la zona predeterminada para esta región
+            region_default = default_zones.get(region)
+            
+            if region_default and region_default in zones:
+                # Si existe la zona predeterminada, seleccionarla
+                for i, zone in enumerate(zones):
+                    if zone == region_default:
+                        self.zone_combo.set_active(i)
+                        break
+            else:
+                # Si no hay zona predeterminada o no existe, seleccionar la primera
+                self.zone_combo.set_active(0)
     
     def on_region_changed(self, widget):
         """Manejador para el cambio de región en el selector"""
@@ -369,42 +529,6 @@ class TimezonePage:
         if region:
             self.current_region = region
             self.populate_zones_for_region(region)
-            
-            # Cambiar automáticamente el idioma según la región
-            if region == "Europe":
-                if "Spain" in self.timezones.get("Europe", []) or "Madrid" in self.timezones.get("Europe", []):
-                    self.language_label.set_text("El idioma del sistema se establecerá a español de España (España).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a español de España (España).")
-                elif "France" in self.timezones.get("Europe", []) or "Paris" in self.timezones.get("Europe", []):
-                    self.language_label.set_text("El idioma del sistema se establecerá a francés de Francia (Francia).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a francés de Francia (Francia).")
-                elif "Germany" in self.timezones.get("Europe", []) or "Berlin" in self.timezones.get("Europe", []):
-                    self.language_label.set_text("El idioma del sistema se establecerá a alemán de Alemania (Alemania).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a alemán de Alemania (Alemania).")
-                elif "United_Kingdom" in self.timezones.get("Europe", []) or "London" in self.timezones.get("Europe", []):
-                    self.language_label.set_text("El idioma del sistema se establecerá a inglés de Reino Unido (UK).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a inglés de Reino Unido (UK).")
-                else:
-                    self.language_label.set_text("El idioma del sistema se establecerá a inglés de Estados Unidos (US).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a inglés de Estados Unidos (US).")
-            elif region == "America":
-                self.language_label.set_text("El idioma del sistema se establecerá a inglés de Estados Unidos (US).")
-                self.locale_label.set_text("La localización de números y fechas se establecerá a inglés de Estados Unidos (US).")
-            elif region == "Asia":
-                self.language_label.set_text("El idioma del sistema se establecerá a inglés Internacional (EN).")
-                self.locale_label.set_text("La localización de números y fechas se establecerá a inglés Internacional (EN).")
-            elif region == "Africa":
-                # Determinar el idioma según la zona seleccionada
-                zone = self.zone_combo.get_active_text()
-                if zone in ["Cairo", "Algiers", "Tunis", "Casablanca"]:
-                    self.language_label.set_text("El idioma del sistema se establecerá a árabe (العربية).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a árabe (العربية).")
-                else:
-                    self.language_label.set_text("El idioma del sistema se establecerá a inglés Internacional (EN).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a inglés Internacional (EN).")
-            else:
-                self.language_label.set_text("El idioma del sistema se establecerá a inglés Internacional (EN).")
-                self.locale_label.set_text("La localización de números y fechas se establecerá a inglés Internacional (EN).")
     
     def on_zone_changed(self, widget):
         """Manejador para el cambio de zona en el selector"""
@@ -425,42 +549,26 @@ class TimezonePage:
             # Actualizar la hora
             self.update_time_label()
             
-            # Actualizar idioma según la zona específica
-            if region == "Europe":
-                if zone == "Madrid" or zone == "Barcelona":
-                    self.language_label.set_text("El idioma del sistema se establecerá a español de España (España).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a español de España (España).")
-                elif zone == "Paris":
-                    self.language_label.set_text("El idioma del sistema se establecerá a francés de Francia (Francia).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a francés de Francia (Francia).")
-                elif zone == "Berlin":
-                    self.language_label.set_text("El idioma del sistema se establecerá a alemán de Alemania (Alemania).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a alemán de Alemania (Alemania).")
-                elif zone == "Rome":
-                    self.language_label.set_text("El idioma del sistema se establecerá a italiano de Italia (Italia).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a italiano de Italia (Italia).")
-                elif zone == "London":
-                    self.language_label.set_text("El idioma del sistema se establecerá a inglés de Reino Unido (UK).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a inglés de Reino Unido (UK).")
-                elif zone == "Lisbon":
-                    self.language_label.set_text("El idioma del sistema se establecerá a portugués de Portugal (Portugal).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a portugués de Portugal (Portugal).")
-                elif zone == "Moscow":
-                    self.language_label.set_text("El idioma del sistema se establecerá a ruso de Rusia (Россия).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a ruso de Rusia (Россия).")
-            elif region == "America":
-                if zone == "Argentina/Buenos Aires":
-                    self.language_label.set_text("El idioma del sistema se establecerá a español de Argentina (Argentina).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a español de Argentina (Argentina).")
-                elif zone == "Mexico City":
-                    self.language_label.set_text("El idioma del sistema se establecerá a español de México (México).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a español de México (México).")
-                elif zone in ["New York", "Chicago", "Denver", "Los Angeles"]:
-                    self.language_label.set_text("El idioma del sistema se establecerá a inglés de Estados Unidos (US).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a inglés de Estados Unidos (US).")
-                elif zone == "Sao Paulo":
-                    self.language_label.set_text("El idioma del sistema se establecerá a portugués de Brasil (Brasil).")
-                    self.locale_label.set_text("La localización de números y fechas se establecerá a portugués de Brasil (Brasil).")
+            # Buscar si hay una variante de idioma que corresponda a esta zona horaria
+            # y actualizar las etiquetas de idioma/localización si es apropiado
+            self.update_language_based_on_timezone(timezone)
+    
+    def update_language_based_on_timezone(self, timezone):
+        """Actualiza las etiquetas de idioma/localización según la zona horaria seleccionada"""
+        # Recorrer todas las definiciones de idioma para encontrar coincidencia de timezone
+        for lang in self.lang_manager.get_all_languages():
+            for variant in lang.get("variants", []):
+                if variant.get("timezone") == timezone:
+                    # Actualizar las etiquetas de idioma y localización
+                    self.language_label.set_text(f"El idioma del sistema se establecerá a {lang['name']} ({variant['name']}).")
+                    self.locale_label.set_text(f"La localización de números y fechas se establecerá a {lang['name']} ({variant['name']}).")
+                    
+                    # Actualizar la configuración de la aplicación
+                    if hasattr(self.app, 'setup'):
+                        self.app.setup.language = lang["code"]
+                        self.app.setup.locale = variant["code"]
+                    
+                    return
     
     def update_time_label(self):
         """Actualiza la etiqueta de hora local"""
@@ -492,9 +600,19 @@ class TimezonePage:
         return True
     
     def on_change_language_clicked(self, button):
-        """Manejador de evento para el botón de cambiar idioma"""
+        """Manejador para el botón de cambiar idioma"""
+        # Crear la ventana de selección de idioma con el título para idioma
+        self.show_language_selector_dialog("Cambiar idioma del sistema")
+    
+    def on_change_locale_clicked(self, button):
+        """Manejador para el botón de cambiar localización"""
+        # Usar el mismo diálogo pero con título para localización
+        self.show_language_selector_dialog("Cambiar configuración regional")
+    
+    def show_language_selector_dialog(self, title="Selección de idioma y región"):
+        """Muestra el diálogo para seleccionar idioma y variante regional"""
         dialog = Gtk.Dialog(
-            title="Cambiar idioma del sistema",
+            title=title,
             parent=None,
             flags=Gtk.DialogFlags.MODAL,
             buttons=(
@@ -502,85 +620,242 @@ class TimezonePage:
                 "Aceptar", Gtk.ResponseType.OK
             )
         )
-        dialog.set_default_size(400, 300)
+        dialog.set_default_size(550, 400)
+        dialog.get_style_context().add_class("language-selector-dialog")
         
         content_area = dialog.get_content_area()
         content_area.set_border_width(15)
         content_area.set_spacing(10)
         
-        label = Gtk.Label("Seleccione el idioma del sistema:")
-        label.set_halign(Gtk.Align.START)
-        content_area.add(label)
+        # Título
+        title_label = Gtk.Label(label="Seleccione su idioma y región")
+        title_label.set_markup("<span font_weight='bold' size='large'>Seleccione su idioma y región</span>")
+        title_label.set_halign(Gtk.Align.START)
+        content_area.add(title_label)
         
-        # Selector de idiomas
-        combo = Gtk.ComboBoxText()
-        combo.append_text("Español (España)")
-        combo.append_text("English (US)")
-        combo.append_text("Français (France)")
-        combo.set_active(0)
-        content_area.add(combo)
+        # Separador
+        separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        content_area.add(separator)
         
+        # Contenedor para los selectores
+        selector_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+        selector_box.set_margin_top(10)
+        
+        # Grid para organizar los combos
+        grid = Gtk.Grid()
+        grid.set_column_spacing(15)
+        grid.set_row_spacing(15)
+        
+        # Etiqueta para el idioma
+        lang_label = Gtk.Label(label="Idioma:")
+        lang_label.set_halign(Gtk.Align.START)
+        grid.attach(lang_label, 0, 0, 1, 1)
+        
+        # ComboBox para idioma
+        self.dialog_lang_store = Gtk.ListStore(str, str)  # code, name
+        self.dialog_lang_combo = Gtk.ComboBox.new_with_model(self.dialog_lang_store)
+        renderer_text = Gtk.CellRendererText()
+        self.dialog_lang_combo.pack_start(renderer_text, True)
+        self.dialog_lang_combo.add_attribute(renderer_text, "text", 1)
+        grid.attach(self.dialog_lang_combo, 1, 0, 1, 1)
+        
+        # Etiqueta para la variante
+        variant_label = Gtk.Label(label="Región:")
+        variant_label.set_halign(Gtk.Align.START)
+        grid.attach(variant_label, 0, 1, 1, 1)
+        
+        # ComboBox para variante
+        self.dialog_variant_store = Gtk.ListStore(str, str, str)  # code, name, timezone
+        self.dialog_variant_combo = Gtk.ComboBox.new_with_model(self.dialog_variant_store)
+        renderer_text = Gtk.CellRendererText()
+        self.dialog_variant_combo.pack_start(renderer_text, True)
+        self.dialog_variant_combo.add_attribute(renderer_text, "text", 1)
+        grid.attach(self.dialog_variant_combo, 1, 1, 1, 1)
+        
+        # Conectar evento de cambio de idioma
+        self.dialog_lang_combo.connect("changed", self.on_dialog_language_changed)
+        
+        # Añadir grid al contenedor
+        selector_box.pack_start(grid, False, False, 0)
+        
+        # Añadir separador
+        separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        selector_box.pack_start(separator, False, False, 5)
+        
+        # Información sobre la selección actual
+        info_label = Gtk.Label()
+        info_label.set_markup("<b>Información de la selección:</b>")
+        info_label.set_halign(Gtk.Align.START)
+        selector_box.pack_start(info_label, False, False, 0)
+        
+        # Detalles de idioma
+        self.dialog_info_label = Gtk.Label()
+        self.dialog_info_label.set_markup("Seleccione un idioma y una región para continuar.")
+        self.dialog_info_label.set_halign(Gtk.Align.START)
+        self.dialog_info_label.set_line_wrap(True)
+        selector_box.pack_start(self.dialog_info_label, False, False, 0)
+        
+        # Detalles de timezone
+        self.dialog_timezone_label = Gtk.Label()
+        self.dialog_timezone_label.set_markup("Zona horaria: <i>no seleccionada</i>")
+        self.dialog_timezone_label.set_halign(Gtk.Align.START)
+        selector_box.pack_start(self.dialog_timezone_label, False, False, 0)
+        
+        # Añadir el contenedor de selectores al diálogo
+        content_area.add(selector_box)
+        
+        # Cargar datos en los combos
+        self.populate_dialog_language_combo()
+        
+        # Establecer valores actuales
+        if hasattr(self.app, 'setup'):
+            current_lang = getattr(self.app.setup, 'language', None)
+            current_locale = getattr(self.app.setup, 'locale', None)
+            
+            if current_lang:
+                # Seleccionar el idioma actual
+                for i, row in enumerate(self.dialog_lang_store):
+                    if row[0] == current_lang:
+                        self.dialog_lang_combo.set_active(i)
+                        
+                        # Cargar variantes y seleccionar la actual
+                        if current_locale:
+                            # Dar tiempo para que se carguen las variantes
+                            while Gtk.events_pending():
+                                Gtk.main_iteration()
+                                
+                            for i, row in enumerate(self.dialog_variant_store):
+                                if row[0] == current_locale:
+                                    self.dialog_variant_combo.set_active(i)
+                                    break
+                        break
+            else:
+                # Si no hay selección previa, usar la primera
+                self.dialog_lang_combo.set_active(0)
+        else:
+            # Si no hay configuración, usar la primera opción
+            self.dialog_lang_combo.set_active(0)
+        
+        # Actualizar información
+        self.update_dialog_info()
+        
+        # Conectar evento para actualizar la información
+        self.dialog_variant_combo.connect("changed", self.on_dialog_variant_changed)
+        
+        # Mostrar todos los elementos
         dialog.show_all()
+        
+        # Ejecutar el diálogo
         response = dialog.run()
         
         if response == Gtk.ResponseType.OK:
-            selected_language = combo.get_active_text()
-            print(f"Idioma seleccionado: {selected_language}")
+            # Obtener los valores seleccionados
+            lang_iter = self.dialog_lang_combo.get_active_iter()
+            variant_iter = self.dialog_variant_combo.get_active_iter()
             
-            # Actualizar la etiqueta para reflejar el cambio
-            if selected_language == "English (US)":
-                self.language_label.set_text("El idioma del sistema se establecerá a inglés de Estados Unidos (US).")
-            elif selected_language == "Français (France)":
-                self.language_label.set_text("El idioma del sistema se establecerá a francés de Francia (Francia).")
-            else:
-                self.language_label.set_text("El idioma del sistema se establecerá a español de España (España).")
+            if lang_iter is not None and variant_iter is not None:
+                lang_code = self.dialog_lang_store[lang_iter][0]
+                lang_name = self.dialog_lang_store[lang_iter][1]
+                
+                variant_code = self.dialog_variant_store[variant_iter][0]
+                variant_name = self.dialog_variant_store[variant_iter][1]
+                timezone = self.dialog_variant_store[variant_iter][2]
+                
+                # Actualizar la configuración
+                if hasattr(self.app, 'setup'):
+                    self.app.setup.language = lang_code
+                    self.app.setup.locale = variant_code
+                    
+                    # Actualizar también la zona horaria
+                    if timezone:
+                        self.app.setup.timezone = timezone
+                        
+                        # Actualizar la interfaz con la nueva zona horaria
+                        self.timezone_label.set_markup(f"<span color='white' size='large' weight='bold'>{timezone}</span>")
+                        
+                        # Actualizar el selector de región/zona si corresponde
+                        if '/' in timezone:
+                            region, zone = timezone.split('/', 1)
+                            zone = zone.replace('_', ' ')
+                            
+                            # Actualizar los selectores
+                            for i, reg in enumerate(self.region_combo.get_model()):
+                                if reg[0] == region:
+                                    self.region_combo.set_active(i)
+                                    
+                                    # Dar tiempo para que se carguen las zonas
+                                    while Gtk.events_pending():
+                                        Gtk.main_iteration()
+                                    
+                                    # Buscar la zona
+                                    for i, z in enumerate(self.zone_combo.get_model()):
+                                        if z[0] == zone:
+                                            self.zone_combo.set_active(i)
+                                            break
+                                    break
+                
+                # Actualizar las etiquetas
+                self.language_label.set_text(f"El idioma del sistema se establecerá a {lang_name} ({variant_name}).")
+                self.locale_label.set_text(f"La localización de números y fechas se establecerá a {lang_name} ({variant_name}).")
         
         dialog.destroy()
     
-    def on_change_locale_clicked(self, button):
-        """Manejador de evento para el botón de cambiar localización"""
-        dialog = Gtk.Dialog(
-            title="Cambiar localización",
-            parent=None,
-            flags=Gtk.DialogFlags.MODAL,
-            buttons=(
-                "Cancelar", Gtk.ResponseType.CANCEL,
-                "Aceptar", Gtk.ResponseType.OK
-            )
-        )
-        dialog.set_default_size(400, 300)
+    def populate_dialog_language_combo(self):
+        """Rellena el combo de idiomas del diálogo"""
+        # Limpiar el store
+        self.dialog_lang_store.clear()
         
-        content_area = dialog.get_content_area()
-        content_area.set_border_width(15)
-        content_area.set_spacing(10)
-        
-        label = Gtk.Label("Seleccione la localización para números y fechas:")
-        label.set_halign(Gtk.Align.START)
-        content_area.add(label)
-        
-        # Selector de localizaciones
-        combo = Gtk.ComboBoxText()
-        combo.append_text("Español (España)")
-        combo.append_text("English (US)")
-        combo.append_text("Français (France)")
-        combo.set_active(0)
-        content_area.add(combo)
-        
-        dialog.show_all()
-        response = dialog.run()
-        
-        if response == Gtk.ResponseType.OK:
-            selected_locale = combo.get_active_text()
+        # Añadir todos los idiomas
+        for lang in self.lang_manager.get_all_languages():
+            self.dialog_lang_store.append([lang["code"], lang["name"]])
+    
+    def on_dialog_language_changed(self, combo):
+        """Maneja el cambio de idioma en el diálogo"""
+        iter = combo.get_active_iter()
+        if iter is not None:
+            lang_code = self.dialog_lang_store[iter][0]
             
-            # Actualizar la etiqueta para reflejar el cambio
-            if selected_locale == "English (US)":
-                self.locale_label.set_text("La localización de números y fechas se establecerá a inglés de Estados Unidos (US).")
-            elif selected_locale == "Français (France)":
-                self.locale_label.set_text("La localización de números y fechas se establecerá a francés de Francia (Francia).")
-            else:
-                self.locale_label.set_text("La localización de números y fechas se establecerá a español de España (España).")
+            # Actualizar el combo de variantes
+            self.dialog_variant_store.clear()
+            
+            # Obtener las variantes para este idioma
+            variants = self.lang_manager.get_language_variants(lang_code)
+            
+            for variant in variants:
+                self.dialog_variant_store.append([
+                    variant["code"], 
+                    variant["name"], 
+                    variant.get("timezone", "")
+                ])
+            
+            # Seleccionar la primera variante por defecto
+            if len(variants) > 0:
+                self.dialog_variant_combo.set_active(0)
+            
+            # Actualizar la información
+            self.update_dialog_info()
+    
+    def on_dialog_variant_changed(self, combo):
+        """Maneja el cambio de variante en el diálogo"""
+        # Actualizar la información
+        self.update_dialog_info()
+    
+    def update_dialog_info(self):
+        """Actualiza la información mostrada en el diálogo"""
+        lang_iter = self.dialog_lang_combo.get_active_iter()
+        variant_iter = self.dialog_variant_combo.get_active_iter()
         
-        dialog.destroy()
+        if lang_iter is not None and variant_iter is not None:
+            lang_name = self.dialog_lang_store[lang_iter][1]
+            variant_name = self.dialog_variant_store[variant_iter][1]
+            timezone = self.dialog_variant_store[variant_iter][2]
+            
+            self.dialog_info_label.set_markup(f"<b>Idioma:</b> {lang_name}\n<b>Región:</b> {variant_name}")
+            
+            if timezone:
+                self.dialog_timezone_label.set_markup(f"<b>Zona horaria:</b> {timezone}")
+            else:
+                self.dialog_timezone_label.set_markup("<b>Zona horaria:</b> <i>no especificada</i>")
     
     def get_content(self):
         """Devuelve el contenedor principal de la página"""
@@ -594,4 +869,4 @@ class TimezonePage:
         """Guarda la zona horaria seleccionada"""
         if hasattr(self.app, 'setup') and hasattr(self.app.setup, 'timezone'):
             return self.app.setup.timezone
-        return "Europe/Madrid"
+        return self.default_timezone
