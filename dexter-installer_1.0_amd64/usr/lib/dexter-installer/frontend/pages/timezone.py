@@ -138,7 +138,7 @@ class TimezonePage:
             button {
                 border-radius: 10px;
                 padding: 6px 10px;
-                border: 1px solid #9370DB; /* Púrpura para combinar con el mapa */
+                border: 1px solid #9370DB;
                 background-color: rgba(40, 40, 40, 0.8);
                 color: white;
             }
@@ -152,8 +152,8 @@ class TimezonePage:
             .timezone-box {
                 background-color: rgba(30, 30, 30, 0.8);
                 border-radius: 8px;
-                padding: 8px; /* Reducido de 12px a 8px */
-                border: 1px solid #9370DB; /* Color púrpura que combina con el mapa */
+                padding: 8px;
+                border: 1px solid #9370DB;
             }
             .info-box {
                 background-color: rgba(30, 30, 30, 0.8);
@@ -248,26 +248,35 @@ class TimezonePage:
         # Añadir el selector al principio del contenido
         self.content.pack_start(selector_box, False, False, 0)
         
-        # Contenedor principal usando Overlay para posicionar el reloj sobre el mapa
-        main_overlay = Gtk.Overlay()
-        main_overlay.set_margin_top(0)
-        main_overlay.set_margin_bottom(5)
-        
-        # Contenedor para el mapa
-        map_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        map_container.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.117, 0.117, 0.117, 1.0))
-        self.content.pack_start(map_container, True, True, 0)
-        
+        # Cargar el mapa directamente
+        map_path = MAP_FILE_PNG
+        map_image = Gtk.Image()
+        try:
+            if os.path.exists(map_path):
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file(map_path)
+                # Ajustar el mapa al tamaño adecuado manteniendo la proporción
+                screen_width = Gdk.Screen.get_default().get_width()
+                target_width = min(752, screen_width - 30)  # Ancho máximo con margen
+                target_height = int(target_width * pixbuf.get_height() / pixbuf.get_width())
+                scaled_pixbuf = pixbuf.scale_simple(target_width, target_height, GdkPixbuf.InterpType.BILINEAR)
+                map_image.set_from_pixbuf(scaled_pixbuf)
+
+            # Añadir la imagen directamente al contenido
+            self.content.pack_start(map_image, True, True, 0)
+        except Exception as e:
+            print(f"Error cargando el mapa: {e}")
+           
         # Contenedor para el reloj (se superpondrá al mapa)
         clock_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         
         # Contenedor para mostrar la zona horaria seleccionada (reloj)
-        timezone_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        timezone_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
         timezone_box.set_halign(Gtk.Align.CENTER)
-        timezone_box.set_valign(Gtk.Align.END)  # Alinear al final (parte inferior)
-        timezone_box.set_margin_bottom(10)  # Pequeño margen desde el borde inferior
+        timezone_box.set_valign(Gtk.Align.END)
+        timezone_box.set_margin_bottom(10)
         timezone_box.get_style_context().add_class("timezone-box")
         timezone_box.set_size_request(280, -1)
+        timezone_box.set_homogeneous(False)
         
         # Etiqueta para la zona horaria
         self.timezone_label = Gtk.Label()
@@ -278,16 +287,16 @@ class TimezonePage:
         self.time_label = Gtk.Label()
         self.time_label.set_markup("<span color='white' size='x-large' weight='bold'>00:00</span>")
         self.time_label.get_style_context().add_class("time-label")
-        self.time_label.set_margin_start(20)
+        self.time_label.set_width_chars(5)
+        self.time_label.set_justify(Gtk.Justification.CENTER)
+        self.time_label.set_xalign(0.5)
+        self.time_label.set_margin_start(0)
         
-        timezone_box.pack_start(self.timezone_label, False, False, 0)
-        timezone_box.pack_start(self.time_label, False, False, 0)
+        timezone_box.pack_start(self.timezone_label, True, True, 0)
+        timezone_box.pack_start(self.time_label, True, True, 0)
         
         # Añadir el reloj al contenedor
         clock_container.pack_start(timezone_box, False, False, 0)
-        
-        # Agregar el reloj como un overlay al mapa, posicionándolo al final
-        main_overlay.add_overlay(clock_container)
         
         # Configurar posicionamiento del overlay del reloj
         clock_container.set_valign(Gtk.Align.END)  # Alinear al final (abajo)
@@ -295,7 +304,7 @@ class TimezonePage:
         clock_container.set_margin_bottom(15)  # Margen desde el borde inferior del mapa
         
         # Añadir el overlay principal al contenido
-        self.content.pack_start(main_overlay, True, True, 0)
+        self.content.pack_start(clock_container, False, False, 0)
         
         # Información de idioma
         language_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
