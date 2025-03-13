@@ -80,7 +80,7 @@ class WelcomePage:
             image_path = os.path.join('/usr/share/dexter-installer/images', 'welcome.png')
             if os.path.exists(image_path):
                 # Reducimos el tamaño del logo a 300x187 para adaptarlo a la ventana más pequeña
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(image_path, 280, 160, True)
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(image_path, 280, 140, True)
                 image = Gtk.Image.new_from_pixbuf(pixbuf)
             else:
                 # Crear una imagen de placeholder si no existe el archivo
