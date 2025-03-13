@@ -18,7 +18,7 @@ import json
 
 # Constantes para el mapa
 MAP_FILE_PNG = '/usr/share/dexter-installer/maps/miller.png'
-MAP_SIZE = (800, 306)
+MAP_SIZE = (800, 350)
 MAP_CENTER = (200, 153)
 
 # Añadir la ruta para importar el gestor de idiomas
@@ -172,28 +172,38 @@ class TimezonePage:
         map_image = Gtk.Image()
         try:
             if os.path.exists(map_path):
+                print(f"Mapa encontrado en: {map_path}")
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file(map_path)
-                # Ajustar el mapa al tamaño adecuado manteniendo la proporción
-                screen_width = Gdk.Screen.get_default().get_width()
-                target_width = 800  # Ancho máximo con margen
-                target_height = int(target_width * pixbuf.get_height() / pixbuf.get_width())
-                
-                # Limitar también la altura para que no haga la ventana más alta
-                max_height = 250  # REDUCIDO DE 250
-                if target_height > max_height:
-                    target_height = max_height
-                    target_width = int(max_height * pixbuf.get_width() / pixbuf.get_height())
-                    
+        
+                # Usar las constantes MAP_SIZE para dimensionar el mapa
+                target_width, target_height = MAP_SIZE
+            
                 scaled_pixbuf = pixbuf.scale_simple(target_width, target_height, GdkPixbuf.InterpType.BILINEAR)
                 map_image.set_from_pixbuf(scaled_pixbuf)
-                
-                # No expandir más allá del tamaño asignado
+        
+                # Asegurar que se aplica el tamaño exacto según las constantes
                 map_image.set_size_request(target_width, target_height)
+                print(f"Mapa redimensionado a: {target_width}x{target_height}")
 
-            # Añadir la imagen al overlay como widget principal
+            else:
+                print(f"¡ADVERTENCIA! Mapa no encontrado en: {map_path}")
+                # Crear un widget de reemplazo para que no esté vacío
+                placeholder = Gtk.Box()
+                placeholder.set_size_request(MAP_SIZE[0], MAP_SIZE[1])
+                placeholder.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.1, 0.1, 0.1, 1.0))
+                map_image = placeholder
+        
+            # Asegurar que el mapa es visible
+            map_image.set_visible(True)
             map_overlay.add(map_image)
+    
         except Exception as e:
             print(f"Error cargando el mapa: {e}")
+            # Crear un widget de reemplazo en caso de error
+            placeholder = Gtk.Box()
+            placeholder.set_size_request(MAP_SIZE[0], MAP_SIZE[1])
+            placeholder.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.1, 0.1, 0.1, 1.0))
+            map_overlay.add(placeholder)
         
         # Contenedor para mostrar la zona horaria seleccionada (reloj)
         timezone_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
