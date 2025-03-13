@@ -87,13 +87,13 @@ class DexterInstallerApp:
         self.config = Config()
         
         # Configurar estilos CSS antes de crear widgets
-        self.load_css()
+        self.apply_css()
         
         # Crear la ventana principal
         self.window = Gtk.Window(title=_("Instalador de DexterOS"))
         # Tamaño reducido
-        self.window.set_default_size(900, 550)
-        self.window.set_size_request(900, 550)
+        self.window.set_default_size(850, 450)
+        self.window.set_size_request(850, 450)
         self.window.set_position(Gtk.WindowPosition.CENTER)
         self.window.set_resizable(False)
         self.window.connect("delete-event", self.on_close)
@@ -202,47 +202,24 @@ class DexterInstallerApp:
         # Estado inicial
         self.current_page_index = 0
     
-    def load_css(self):
-        """Carga el CSS personalizado para la aplicación"""
+    def apply_css(self):
+        """Carga el CSS personalizado para la aplicación desde un archivo externo"""
         css_provider = Gtk.CssProvider()
-        css = """
-        /* Estilos globales */
-        window {
-            background-color: #1e1e1e;
-        }
-
-        /* Esquinas redondeadas para la ventana principal */
-        decoration {
-            border-radius: 30px;
-        }
-
-        /* Ajustes generales para todos los labels para asegurar visibilidad */
-        label {
-            color: #40E0D0;
-        }
-
-        /* Estilo para el fondo de los botones */
-        .button-background {
-            background-color: #212836;
-            border-bottom-left-radius: 20px;
-            border-bottom-right-radius: 20px;
-        }
-
-        /* Boton con degradado especial */
-        button {
-            border-radius: 10px;
-            padding: 6px 10px;
-            border: 1px solid #9370DB; /* Púrpura para combinar con el mapa */
-            background-color: rgba(40, 40, 40, 0.8);
-            color: white;
-        }
-        """
-        css_provider.load_from_data(css.encode())
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            css_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
+        try:
+            # Intentar cargar desde la ubicación de instalación
+            css_path = '/usr/share/dexter-installer/styles/style.css'
+            if not os.path.exists(css_path):
+                # Si no está en la ubicación de instalación, intentar en la carpeta actual
+                css_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'styles', 'styles.css')
+            
+            css_provider.load_from_path(css_path)
+            Gtk.StyleContext.add_provider_for_screen(
+                Gdk.Screen.get_default(),
+                css_provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            )
+        except Exception as e:
+            print(f"Error al cargar CSS: {e}")
     
     def draw_window(self, widget, context):
         """Dibuja el fondo de la ventana con esquinas redondeadas"""
@@ -375,4 +352,3 @@ class DexterInstallerApp:
 if __name__ == "__main__":
     app = DexterInstallerApp()
     app.run()
-    
