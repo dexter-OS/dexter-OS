@@ -92,14 +92,14 @@ class DexterInstallerApp:
         # Crear la ventana principal
         self.window = Gtk.Window(title=_("Instalador de DexterOS"))
         # Tamaño reducido
-        self.window.set_default_size(850, 500)
-        self.window.set_size_request(850, 500)
+        self.window.set_default_size(850, 600)
+        self.window.set_size_request(850, 600)
         self.window.set_position(Gtk.WindowPosition.CENTER)
         self.window.set_resizable(False)
         self.window.connect("delete-event", self.on_close)
         
         # Añadir también esta línea para forzar el tamaño
-        self.window.resize(850, 500)
+        self.window.resize(850, 600)
         
         # Quitar la decoración de la ventana (barra de título y botones)
         self.window.set_decorated(False)
