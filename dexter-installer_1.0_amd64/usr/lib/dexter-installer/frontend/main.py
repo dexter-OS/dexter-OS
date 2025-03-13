@@ -10,6 +10,8 @@ import os
 import sys
 import gi
 import gettext
+import fcntl
+import tempfile
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GdkPixbuf, GLib
@@ -25,10 +27,62 @@ from frontend.pages.welcome import WelcomePage
 from frontend.pages.timezone import TimezonePage
 from frontend.pages.keyboard import KeyboardPage
 
+class SingleInstanceApp:
+    """Clase para asegurar que solo se ejecuta una instancia de la aplicación"""
+    
+    def __init__(self, lock_file):
+        self.lock_file = lock_file
+        self.lock_handle = None
+        
+    def acquire_lock(self):
+        """Intenta adquirir el bloqueo. Retorna True si lo consigue, False si no."""
+        try:
+            # Abrir o crear el archivo de bloqueo
+            self.lock_handle = open(self.lock_file, 'w')
+            # Intentar bloquear el archivo (no bloqueante)
+            fcntl.flock(self.lock_handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            # Escribir el PID actual en el archivo
+            self.lock_handle.write(str(os.getpid()))
+            self.lock_handle.flush()
+            return True
+        except IOError:
+            # No se pudo adquirir el bloqueo, probablemente otra instancia está corriendo
+            if self.lock_handle:
+                self.lock_handle.close()
+                self.lock_handle = None
+            return False
+    
+    def release_lock(self):
+        """Libera el bloqueo si está adquirido"""
+        if self.lock_handle:
+            fcntl.flock(self.lock_handle, fcntl.LOCK_UN)
+            self.lock_handle.close()
+            self.lock_handle = None
+            try:
+                os.remove(self.lock_file)
+            except:
+                pass
+
 class DexterInstallerApp:
     """Aplicación principal del instalador DexterOS"""
     
-    def __init__(self):            
+    def __init__(self):
+        # Verificar que solo se ejecuta una instancia
+        lock_file = os.path.join(tempfile.gettempdir(), 'dexter-installer.lock')
+        self.single_instance = SingleInstanceApp(lock_file)
+        
+        if not self.single_instance.acquire_lock():
+            dialog = Gtk.MessageDialog(
+                transient_for=None,
+                flags=0,
+                message_type=Gtk.MessageType.INFO,
+                buttons=Gtk.ButtonsType.OK,
+                text=_("El instalador ya está en ejecución")
+            )
+            dialog.run()
+            dialog.destroy()
+            sys.exit(1)
+            
         # Cargar configuración
         self.config = Config()
         
@@ -211,8 +265,6 @@ class DexterInstallerApp:
         context.set_source_rgba(0.12, 0.12, 0.12, 1)  #1e1e1e
         context.fill()
         
-        # Ya no se dibuja el borde rojo
-        
         return False  # Permitir dibujado de widgets hijo
     
     def on_close(self, widget, event):
@@ -229,6 +281,8 @@ class DexterInstallerApp:
         
         if response == Gtk.ResponseType.YES:
             dialog.destroy()
+            # Liberar el bloqueo antes de salir
+            self.single_instance.release_lock()
             Gtk.main_quit()
             return False
         else:
@@ -321,3 +375,4 @@ class DexterInstallerApp:
 if __name__ == "__main__":
     app = DexterInstallerApp()
     app.run()
+    
