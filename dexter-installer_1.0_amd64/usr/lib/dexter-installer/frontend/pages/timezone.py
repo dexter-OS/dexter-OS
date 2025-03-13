@@ -18,8 +18,8 @@ import json
 
 # Constantes para el mapa
 MAP_FILE_PNG = '/usr/share/dexter-installer/maps/miller.png'
-MAP_SIZE = (600, 306)
-MAP_CENTER = (300, 153)
+MAP_SIZE = (800, 306)
+MAP_CENTER = (200, 153)
 
 # Añadir la ruta para importar el gestor de idiomas
 sys.path.insert(0, '/usr/lib/dexter-installer')
@@ -88,10 +88,10 @@ class TimezonePage:
         style_context = Gtk.StyleContext()
         style_context.add_provider_for_screen(screen, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         
-        # Crear el contenedor principal
-        self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        self.content.set_margin_bottom(15)
-        self.content.set_size_request(850, 300)  # Establecer límite explícito de tamaño
+        # Crear el contenedor principal - REDUCIDO SPACING
+        self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        self.content.set_margin_bottom(0) # Eliminar el margen inferior por completo
+        self.content.set_size_request(850, 500)
         
         # Título de la página
         title_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
@@ -126,7 +126,7 @@ class TimezonePage:
         subtitle.set_markup("<span foreground='white' size='medium'>¿Dónde estás?</span>")
         subtitle.set_halign(Gtk.Align.START)
         subtitle.set_margin_start(250)
-        subtitle.set_margin_bottom(10)
+        subtitle.set_margin_bottom(5)  # REDUCIDO MARGIN
         
         # Añadir los labels al title_labels
         title_labels.pack_start(title, False, False, 0)
@@ -164,6 +164,9 @@ class TimezonePage:
         # Añadir el selector al principio del contenido
         self.content.pack_start(selector_box, False, False, 0)
         
+        # NUEVO: Crear overlay para el mapa y el reloj
+        map_overlay = Gtk.Overlay()
+        
         # Cargar el mapa directamente
         map_path = MAP_FILE_PNG
         map_image = Gtk.Image()
@@ -176,7 +179,7 @@ class TimezonePage:
                 target_height = int(target_width * pixbuf.get_height() / pixbuf.get_width())
                 
                 # Limitar también la altura para que no haga la ventana más alta
-                max_height = 250  # Altura máxima permitida
+                max_height = 250  # REDUCIDO DE 250
                 if target_height > max_height:
                     target_height = max_height
                     target_width = int(max_height * pixbuf.get_width() / pixbuf.get_height())
@@ -187,13 +190,10 @@ class TimezonePage:
                 # No expandir más allá del tamaño asignado
                 map_image.set_size_request(target_width, target_height)
 
-            # Añadir la imagen directamente al contenido
-            self.content.pack_start(map_image, False, False, 0)
+            # Añadir la imagen al overlay como widget principal
+            map_overlay.add(map_image)
         except Exception as e:
             print(f"Error cargando el mapa: {e}")
-           
-        # Contenedor para el reloj (se superpondrá al mapa)
-        clock_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         
         # Contenedor para mostrar la zona horaria seleccionada (reloj)
         timezone_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
@@ -221,22 +221,17 @@ class TimezonePage:
         timezone_box.pack_start(self.timezone_label, True, True, 0)
         timezone_box.pack_start(self.time_label, True, True, 0)
         
-        # Añadir el reloj al contenedor
-        clock_container.pack_start(timezone_box, False, False, 0)
+        # Añadir el reloj como overlay
+        map_overlay.add_overlay(timezone_box)
         
-        # Configurar posicionamiento del overlay del reloj
-        clock_container.set_valign(Gtk.Align.END)  # Alinear al final (abajo)
-        clock_container.set_halign(Gtk.Align.CENTER)  # Centrar horizontalmente
-        clock_container.set_margin_bottom(15)  # Margen desde el borde inferior del mapa
+        # Añadir el overlay completo al contenido
+        self.content.pack_start(map_overlay, False, False, 0)
         
-        # Añadir el overlay principal al contenido
-        self.content.pack_start(clock_container, False, False, 0)
-        
-        # Información de idioma
-        language_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        # Información de idioma - REDUCIDOS MÁRGENES
+        language_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
         language_box.get_style_context().add_class("info-box")
-        language_box.set_margin_top(5)
-        language_box.set_margin_bottom(5)
+        language_box.set_margin_top(2)
+        language_box.set_margin_bottom(2)
         language_box.set_margin_start(10)
         language_box.set_margin_end(10)
         
@@ -731,4 +726,3 @@ class TimezonePage:
         if hasattr(self.app, 'setup') and hasattr(self.app.setup, 'timezone'):
             return self.app.setup.timezone
         return self.default_timezone
-
