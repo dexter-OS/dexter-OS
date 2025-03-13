@@ -10,7 +10,6 @@ import os
 import sys
 import gi
 import gettext
-import socket
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GdkPixbuf, GLib
@@ -24,35 +23,12 @@ from helpers.config import Config
 # Importar páginas
 from frontend.pages.welcome import WelcomePage
 from frontend.pages.timezone import TimezonePage
+from frontend.pages.keyboard import KeyboardPage
 
-class SingleInstanceChecker:
-    """Clase para asegurar que solo se ejecute una instancia de la aplicación"""
-    def __init__(self, name):
-        self.name = name
-        self.lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-        self.is_running = False
-        
-        try:
-            # Intenta crear un socket Unix con el nombre del lock file
-            self.lock_socket.bind('\0' + self.name)
-            self.is_running = False
-        except socket.error:
-            self.is_running = True
-    
-    def already_running(self):
-        """Retorna True si ya hay otra instancia ejecutándose"""
-        return self.is_running
-        
 class DexterInstallerApp:
     """Aplicación principal del instalador DexterOS"""
     
-    def __init__(self):
-        # Verificar que solo se ejecute una instancia
-        instance_check = SingleInstanceChecker("dexter-installer")
-        if instance_check.already_running():
-            print("Ya hay una instancia del instalador en ejecución.")
-            sys.exit(1)
-            
+    def __init__(self):            
         # Cargar configuración
         self.config = Config()
         
@@ -123,20 +99,27 @@ class DexterInstallerApp:
         # Inicializar las páginas 
         self.pages = {
             "welcome": WelcomePage(self),
-            "timezone": TimezonePage(self)
+            "timezone": TimezonePage(self),
+            "keyboard": KeyboardPage(self)
         }
         
         # Añadir las páginas al stack
         self.stack.add_named(self.pages["welcome"].get_content(), "welcome")
         self.stack.add_named(self.pages["timezone"].get_content(), "timezone")
+        self.stack.add_named(self.pages["keyboard"].get_content(), "keyboard")
         
-        # Botones de navegación
+        # Crear un box para los botones con fondo personalizado
+        self.button_background = Gtk.EventBox()
+        self.button_background.get_style_context().add_class("button-background")
+        self.main_content.pack_end(self.button_background, False, True, 0)
+        
+        # Botones de navegación dentro del EventBox
         self.button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.button_box.set_margin_top(10)
         self.button_box.set_margin_bottom(10)
         self.button_box.set_margin_start(10)
         self.button_box.set_margin_end(10)
-        self.main_content.pack_end(self.button_box, False, False, 0)
+        self.button_background.add(self.button_box)
         
         # Botón Cancelar
         self.cancel_button = Gtk.Button(label=_("Cancelar"))
@@ -184,46 +167,20 @@ class DexterInstallerApp:
             color: #40E0D0;
         }
 
+        /* Estilo para el fondo de los botones */
+        .button-background {
+            background-color: #212836;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+        }
+
         /* Boton con degradado especial */
-        button.cancel-button {
-            background-image: linear-gradient(to right, @accent_red, #D35400);
+        button {
+            border-radius: 10px;
+            padding: 6px 10px;
+            border: 1px solid #9370DB; /* Púrpura para combinar con el mapa */
+            background-color: rgba(40, 40, 40, 0.8);
             color: white;
-            border: none;
-            border-radius: 20px;
-            padding: 5px 15px;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-        
-        button.cancel-button:hover {
-            background-image: linear-gradient(to right, #B71C1C, #E74C3C);
-            opacity: 0.9;
-        }
-
-        button.cancel-button label {
-            color: white;
-        }
-
-        button.cancel-button:hover {
-            background-image: linear-gradient(to right, #B71C1C, #E74C3C);
-            opacity: 0.9;
-        }
-        
-        button.back-button, button.suggested-action {
-            background-color: cyan;
-            color: black;
-            border: none;
-            border-radius: 20px;
-            padding: 5px 15px;
-            font-weight: bold;
-        }
-        
-        button.back-button:hover, button.suggested-action:hover {
-            background-color: turquoise;
-        }
-
-        button.back-button label, button.suggested-action label {
-            color: black;
         }
         """
         css_provider.load_from_data(css.encode())
@@ -254,18 +211,7 @@ class DexterInstallerApp:
         context.set_source_rgba(0.12, 0.12, 0.12, 1)  #1e1e1e
         context.fill()
         
-        # Ahora dibuja el borde (crea un nuevo camino)
-        context.new_sub_path()
-        context.arc(radius, radius, radius, 180 * (3.14/180), 270 * (3.14/180))
-        context.arc(width - radius, radius, radius, 270 * (3.14/180), 0)
-        context.arc(width - radius, height - radius, radius, 0, 90 * (3.14/180))
-        context.arc(radius, height - radius, radius, 90 * (3.14/180), 180 * (3.14/180))
-        context.close_path()
-        
-        # Dibujar el borde rojo de 2px
-        context.set_source_rgb(1, 0, 0)  # Color rojo
-        context.set_line_width(2)
-        context.stroke()
+        # Ya no se dibuja el borde rojo
         
         return False  # Permitir dibujado de widgets hijo
     
@@ -310,6 +256,8 @@ class DexterInstallerApp:
             current_page = self.pages["welcome"]
         elif current_page_id == "timezone":
             current_page = self.pages["timezone"]
+        elif current_page_id == "keyboard":
+            current_page = self.pages["keyboard"]
         
         # Validar la página actual
         if current_page and hasattr(current_page, 'validate') and not current_page.validate():
@@ -368,3 +316,8 @@ class DexterInstallerApp:
                 self.back_button.hide()
             else:
                 self.back_button.show()
+
+# Inicializar la aplicación
+if __name__ == "__main__":
+    app = DexterInstallerApp()
+    app.run()

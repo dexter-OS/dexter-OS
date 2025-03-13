@@ -40,9 +40,6 @@ class WelcomePage:
         
         # Crear el contenedor principal
         self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        self.content.set_margin_start(2)
-        self.content.set_margin_end(2)
-        self.content.set_margin_top(2)
         self.content.set_margin_bottom(15)
         
         # Guardar los márgenes originales
