@@ -1,0 +1,7 @@
+ef022e63b5e9aea1d1da62d9006e31ff  lib/live/config/1050-gxde-lang-selector
+a3236ea21c384399f2baa2082ce64e6f  usr/bin/gxde-lang-selector
+78701105e7136593564d9f57612ea602  usr/lib/gxde-lang-selector/session.wrapper
+09b59fff1b5da115252e5c74a89af6d4  usr/share/doc/gxde-lang-selector/changelog.gz
+48acbdc1bf9d13e5008153b4e9277583  usr/share/doc/gxde-lang-selector/copyright
+cc08b6fe033a334d6f94b072cd8b7c65  usr/share/gxde-lang-selector/resources/default_wallpaper.jpg
+4d2532d105f75a0fe46283ca2f2b9c01  usr/share/gxde-lang-selector/resources/languages.json
