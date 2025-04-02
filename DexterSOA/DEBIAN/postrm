@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+
+if [ "$1" = "purge" ]; then
+    # Eliminar directorio de configuración
+    rm -rf /etc/dexter-soa
+fi
+
+# Actualizar caché de iconos
+if [ -x "$(command -v gtk-update-icon-cache)" ]; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor
+fi
+
+# Actualizar caché de aplicaciones de escritorio
+if [ -x "$(command -v update-desktop-database)" ]; then
+    update-desktop-database -q
+fi
+
+exit 0
