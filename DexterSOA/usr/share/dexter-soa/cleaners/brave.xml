@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    BleachBit
+    Copyright (C) 2008-2021 Andrew Ziem
+    https://www.bleachbit.org
+
+    Este programa es software libre: puede redistribuirlo y/o modificarlo
+    bajo los términos de la Licencia Pública General de GNU, versión 3 de la
+    Licencia, o (a su elección) cualquier versión posterior.
+
+    Este programa se distribuye con la esperanza de que sea útil,
+    pero SIN NINGUNA GARANTÍA; sin incluso la garantía implícita de
+    COMERCIABILIDAD o APTITUD PARA UN PROPÓSITO PARTICULAR.  Vea la
+    Licencia Pública General de GNU para más detalles.
+
+    Debe haber recibido una copia de la Licencia Pública General de GNU
+    junto con este programa.  Si no, vea <http://www.gnu.org/licenses/>.
+-->
+<cleaner id="brave" os="linux">
+  <label>Brave</label>
+  <description>Navegador web</description>
+  <running type="exe">brave</running>
+  <var name="base">
+    <value>$XDG_CONFIG_HOME/BraveSoftware/Brave-Browser</value>
+  </var>
+  <var name="profile">
+    <value>$XDG_CONFIG_HOME/BraveSoftware/Brave-Browser/Default</value>
+  </var>
+  <option id="cache">
+    <label>Caché</label>
+    <description>Eliminar la caché web, lo que reduce el tiempo para mostrar páginas revisitadas</description>
+    <action command="delete" search="file" path="$$base$$/Safe Browsing Channel IDs-journal"/>
+    <action command="delete" search="file" path="$$profile$$/Network Persistent State"/>
+    <action command="delete" search="walk.all" path="$$base$$/ShaderCache"/>
+    <action command="delete" search="walk.all" path="$$profile$$/File System"/>
+    <action command="delete" search="walk.all" path="$$profile$$/Pepper Data/Shockwave Flash/CacheWritableAdobeRoot/"/>
+    <action command="delete" search="walk.all" path="$$profile$$/Service Worker"/>
+    <action command="delete" search="walk.all" path="$$profile$$/Storage/ext/*/*def/GPUCache"/>
+    <action command="delete" search="walk.files" path="$$profile$$/GPUCache/"/>
+    <action command="json" search="file" path="$$profile$$/Preferences" address="dns_prefetching/host_referral_list"/>
+    <action command="json" search="file" path="$$profile$$/Preferences" address="dns_prefetching/startup_list"/>
+    <action command="json" search="file" path="$$profile$$/Preferences" address="net/http_server_properties/servers"/>
+    <action command="json" search="file" path="$$base$$/Local State" address="HostReferralList"/>
+    <action command="json" search="file" path="$$base$$/Local State" address="StartupDNSPrefetchList"/>
+    <!-- Específico de Linux -->
+    <action command="delete" search="walk.files" path="$XDG_CACHE_HOME/BraveSoftware/Brave-Browser/"/>
+  </option>
+  <option id="cookies">
+    <label>Cookies</label>
+    <description>Eliminar cookies, que contienen información como preferencias de sitios web, autenticación e identificación de seguimiento</description>
+    <action command="delete" search="file" path="$$profile$$/Cookies"/>
+    <action command="delete" search="file" path="$$profile$$/Cookies-journal"/>
+    <action command="delete" search="file" path="$$profile$$/Extension Cookies"/>
+    <action command="delete" search="file" path="$$profile$$/Extension Cookies-journal"/>
+    <action command="delete" search="walk.all" path="$$profile$$/IndexedDB/"/>
+    <action command="delete" search="walk.all" path="$$profile$$/Pepper Data/Shockwave Flash/WritableRoot/"/>
+  </option>
+  <option id="dom">
+    <label>Almacenamiento DOM</label>
+    <description>Eliminar cookies HTML5</description>
+    <action command="chrome.databases_db" search="file" path="$$profile$$/databases/Databases.db"/>
+    <action command="delete" search="glob" path="$$profile$$/Local Storage/http*localstorage"/>
+    <action command="delete" search="glob" path="$$profile$$/Local Storage/http*localstorage-journal"/>
+    <action command="delete" search="walk.all" path="$$profile$$/databases/http*/"/>
+    <action command="delete" search="walk.all" path="$$profile$$/Local Storage/leveldb"/>
+  </option>
+  <option id="form_history">
+    <label>Historial de formularios</label>
+    <description>Historial de formularios introducidos en sitios web</description>
+    <action command="chrome.autofill" search="file" path="$$profile$$/Web Data"/>
+  </option>
+  <option id="history">
+    <label>Historial</label>
+    <description>Eliminar el historial que incluye sitios visitados, descargas y miniaturas</description>
+    <!-- mantener /History antes de /Favicons -->
+    <action command="chrome.history" search="file" path="$$profile$$/History"/>
+    <action command="chrome.favicons" search="file" path="$$profile$$/Favicons"/>
+    <action command="delete" search="file" path="$$base$$/chrome_shutdown_ms.txt"/>
+    <action command="delete" search="file" path="$$base$$/Safe Browsing Cookies-journal"/>
+    <action command="delete" search="file" path="$$profile$$/Archived History"/>
+    <action command="delete" search="file" path="$$profile$$/Archived History-journal"/>
+    <action command="delete" search="file" path="$$profile$$/DownloadMetadata"/>
+    <action command="delete" search="file" path="$$profile$$/History-journal"/>
+    <action command="delete" search="glob" path="$$profile$$/History Index ????-??"/>
+    <action command="delete" search="glob" path="$$profile$$/History Index ????-??-journal"/>
+    <action command="delete" search="file" path="$$profile$$/History Provider Cache"/>
+    <action command="delete" search="file" path="$$profile$$/Network Action Predictor"/>
+    <action command="delete" search="file" path="$$profile$$/Network Action Predictor-journal"/>
+    <action command="delete" search="file" path="$$profile$$/Origin Bound Certs-journal"/>
+    <action command="delete" search="file" path="$$profile$$/Shortcuts"/>
+    <action command="delete" search="file" path="$$profile$$/Shortcuts-journal"/>
+    <!-- Antes de enero de 2016, Thumbnails era un archivo SQLite, en Google Chrome 48 es una carpeta -->
+    <action command="delete" search="file" path="$$profile$$/Thumbnails"/>
+    <action command="delete" search="walk.files" path="$$profile$$/Thumbnails"/>
+    <action command="delete" search="file" path="$$profile$$/Thumbnails-journal"/>
+    <action command="delete" search="file" path="$$profile$$/Top Sites"/>
+    <action command="delete" search="file" path="$$profile$$/Top Sites-journal"/>
+    <action command="delete" search="file" path="$$profile$$/Visited Links"/>
+    <action command="delete" search="file" path="$$profile$$/QuotaManager"/>
+    <action command="delete" search="file" path="$$profile$$/QuotaManager-journal"/>
+    <action command="delete" search="walk.files" path="$$profile$$/Session Storage/"/>
+  </option>
+  <option id="search_engines">
+    <label>Motores de búsqueda</label>
+    <description>Restablecer el historial de uso del motor de búsqueda y eliminar los motores de búsqueda no predeterminados, algunos de los cuales se agregan automáticamente</description>
+    <action command="chrome.keywords" search="file" path="$$profile$$/Web Data"/>
+  </option>
+  <option id="session">
+    <label>Sesión</label>
+    <description>Eliminar la sesión actual y la última</description>
+    <action command="delete" search="file" path="$$profile$$/Current Session"/>
+    <action command="delete" search="file" path="$$profile$$/Current Tabs"/>
+    <action command="delete" search="file" path="$$profile$$/Last Session"/>
+    <action command="delete" search="file" path="$$profile$$/Last Tabs"/>
+    <action command="delete" search="walk.all" path="$$profile$$/Extension State"/>
+    <action command="delete" search="walk.all" path="$$profile$$/Sessions"/>
+  </option>
+  <option id="sync">
+    <label>Sincronización</label>
+    <description>Eliminar los datos de sincronización y cerrar sesión en el navegador</description>
+    <action command="delete" search="walk.files" path="$$profile$$/Sync Data/"/>
+    <action command="delete" search="walk.files" path="$$profile$$/Sync Data Backup/"/>
+    <action command="json" search="file" path="$$base$$/Local State" address="profile"/>
+    <action command="json" search="file" path="$$profile$$/Preferences" address="account_info"/>
+    <action command="json" search="file" path="$$profile$$/Preferences" address="google_services"/>
+    <action command="json" search="file" path="$$profile$$/Preferences" address="sync"/>
+  </option>
+  <option id="passwords">
+    <label>Contraseñas</label>
+    <description>Base de datos de nombres de usuario y contraseñas, así como una lista de sitios que no deben almacenar contraseñas</description>
+    <warning>Esta opción eliminará sus contraseñas guardadas.</warning>
+    <action command="delete" search="file" path="$$profile$$/Login Data"/>
+    <action command="delete" search="file" path="$$profile$$/Login Data-journal"/>
+  </option>
+  <option id="vacuum">
+    <label>Vaciar</label>
+    <description>Limpiar la fragmentación de la base de datos para reducir el espacio y mejorar la velocidad sin eliminar ningún dato</description>
+    <action command="sqlite.vacuum" search="glob" path="$$profile$$/*.sqlite"/>
+    <action command="sqlite.vacuum" search="glob" path="$$profile$$/*.db"/>
+  </option>
+  <option id="site_preferences">
+    <label>Preferencias del sitio</label>
+    <description>Ajustes para sitios individuales</description>
+    <action command="json" search="file" path="$$profile$$/Preferences" address="profile/content_settings/exceptions"/>
+  </option>
+</cleaner>

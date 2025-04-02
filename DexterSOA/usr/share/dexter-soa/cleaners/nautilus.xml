@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    BleachBit
+    Copyright (C) 2008-2021 Andrew Ziem
+    https://www.bleachbit.org
+
+    Este programa es software libre: puede redistribuirlo y/o modificarlo
+    bajo los términos de la Licencia Pública General de GNU, versión 3 de la
+    Licencia, o (a su elección) cualquier versión posterior.
+
+    Este programa se distribuye con la esperanza de que sea útil,
+    pero SIN NINGUNA GARANTÍA; sin incluso la garantía implícita de
+    COMERCIABILIDAD o APTITUD PARA UN PROPÓSITO PARTICULAR.  Vea la
+    Licencia Pública General de GNU para más detalles.
+
+    Debe haber recibido una copia de la Licencia Pública General de GNU
+    junto con este programa.  Si no, vea <http://www.gnu.org/licenses/>.
+-->
+<cleaner id="nautilus" os="linux">
+  <label>Nautilus</label>
+  <description>Gestor de archivos</description>
+  <option id="history">
+    <label>Historial</label>
+    <description>Eliminar el historial de uso</description>
+    <warning>Las carpetas personalizadas se restablecerán.</warning>
+    <action command="delete" search="glob" path="~/.nautilus/saved-session-??????"/>
+    <action command="delete" search="glob" path="~/.nautilus/metafiles/*:*.xml"/>
+  </option>
+</cleaner>

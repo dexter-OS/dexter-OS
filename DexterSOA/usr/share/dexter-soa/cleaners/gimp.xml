@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    BleachBit
+    Copyright (C) 2008-2021 Andrew Ziem
+    https://www.bleachbit.org
+
+    Este programa es software libre: puede redistribuirlo y/o modificarlo
+    bajo los términos de la Licencia Pública General de GNU, versión 3 de la
+    Licencia, o (a su elección) cualquier versión posterior.
+
+    Este programa se distribuye con la esperanza de que sea útil,
+    pero SIN NINGUNA GARANTÍA; sin incluso la garantía implícita de
+    COMERCIABILIDAD o APTITUD PARA UN PROPÓSITO PARTICULAR.  Vea la
+    Licencia Pública General de GNU para más detalles.
+
+    Debe haber recibido una copia de la Licencia Pública General de GNU
+    junto con este programa.  Si no, vea <http://www.gnu.org/licenses/>.
+-->
+<cleaner id="gimp" os="linux">
+  <label>GIMP</label>
+  <description>Editor de gráficos</description>
+  <option id="tmp">
+    <label>Archivos temporales</label>
+    <description>Eliminar los archivos temporales</description>
+    <!-- GIMP usa rutas idénticas en Chakra 2014.05, Fedora 10 -->
+    <action command="delete" search="walk.files" path="~/.gimp-2.4/tmp/"/>
+    <action command="delete" search="walk.files" path="~/.gimp-2.6/tmp/"/>
+    <action command="delete" search="walk.files" path="~/.gimp-2.8/tmp/"/>
+  </option>
+</cleaner>

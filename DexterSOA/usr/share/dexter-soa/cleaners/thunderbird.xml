@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    BleachBit
+    Copyright (C) 2008-2021 Andrew Ziem
+    https://www.bleachbit.org
+
+    Este programa es software libre: puede redistribuirlo y/o modificarlo
+    bajo los términos de la Licencia Pública General de GNU, versión 3 de la
+    Licencia, o (a su elección) cualquier versión posterior.
+
+    Este programa se distribuye con la esperanza de que sea útil,
+    pero SIN NINGUNA GARANTÍA; sin incluso la garantía implícita de
+    COMERCIABILIDAD o APTITUD PARA UN PROPÓSITO PARTICULAR.  Vea la
+    Licencia Pública General de GNU para más detalles.
+
+    Debe haber recibido una copia de la Licencia Pública General de GNU
+    junto con este programa.  Si no, vea <http://www.gnu.org/licenses/>.
+-->
+<cleaner id="thunderbird" os="linux">
+  <label>Thunderbird</label>
+  <description>Cliente de correo electrónico</description>
+  <running type="exe" os="linux">thunderbird</running>
+  <var name="profile">
+    <!-- Fedora 11 Thunderbird 3.0 has ~/.thunderbird/default/????????.slt/ -->
+    <!-- Ubuntu 10.04 Thunderbird 3 has ~/.thunderbird/????????.default/ -->
+    <!-- Ubuntu 9.10 Thunderbird 2.0 has ~/.mozilla-thunderbird/????????.default/ -->
+    <!-- openSUSE 11.3 Thunderbird 3 has ~/.thunderbird/Profiles/????????.default/ -->
+    <value search="glob" os="linux">~/.thunderbird/*</value>
+    <value search="glob" os="linux">~/.mozilla-thunderbird/*</value>
+    <value search="glob" os="linux">~/.thunderbird/Profiles/*</value>
+  </var>
+  <option id="cache">
+    <label>Caché</label>
+    <description>Eliminar la caché web, que reduce el tiempo para mostrar páginas revisitadas</description>
+    <action command="delete" search="walk.all" path="$$profile$$/Cache/"/>
+    <action command="delete" search="walk.all" path="~/.cache/thunderbird/"/>
+    <!-- Ubuntu 10.04 Thunderbird 3 has ~/.thunderbird/????????.default/Cache/ -->
+    <!-- openSUSE 11.3 Thunderbird 3 has ~/.thunderbird/Profiles/????????.default/Cache/ -->
+    <!-- Ubuntu 19.04 Thunderbird 60.0.80 has ~/.cache/thunderbird/ , and it is no longer under $$profile$$-->
+  </option>
+  <option id="cookies">
+    <label>Cookies</label>
+    <description>Eliminar cookies, que contienen información como preferencias de sitios web, autenticación e identificación de seguimiento</description>
+    <action command="delete" search="file" path="$$profile$$/cookies.sqlite"/>
+  </option>
+  <option id="index">
+    <label>Índice</label>
+    <description>Eliminar los archivos</description>
+    <warning>Eliminar el índice restablecerá la configuración de las columnas en la lista de mensajes.</warning>
+    <action command="delete" search="walk.files" path="$$profile$$" regex="\.msf$"/>
+  </option>
+  <option id="sessionjson">
+    <!-- delete the session, i.e. open windows and tabs  -->
+    <label>Restauración de sesión</label>
+    <description>Carga la sesión inicial después de que el navegador se cierre o falle</description>
+    <action command="delete" search="file" path="$$profile$$/session.json"/>
+  </option>
+  <option id="passwords">
+    <label>Contraseñas</label>
+    <description>Una base de datos de nombres de usuario y contraseñas, así como una lista de sitios que no deberían almacenar contraseñas</description>
+    <warning>Esta opción eliminará sus contraseñas guardadas.</warning>
+    <action command="delete" search="file" path="$$profile$$/signons.sqlite"/>
+    <action command="delete" search="file" path="$$profile$$/signons.txt"/>
+    <action command="delete" search="file" path="$$profile$$/signons3.txt"/>
+  </option>
+  <option id="vacuum">
+    <label>Vaciar</label>
+    <description>Limpiar la fragmentación de la base de datos para reducir el espacio y mejorar la velocidad sin eliminar ningún dato</description>
+    <action command="sqlite.vacuum" search="glob" path="$$profile$$/*.sqlite"/>
+  </option>
+</cleaner>

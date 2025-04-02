@@ -1,0 +1,295 @@
+/* Tema oscuro para DexterSOA */
+
+/* Ventana principal */
+window {
+    background-color: #242424;
+    color: #e6e6e6;
+}
+
+/* Cabecera */
+.header {
+    background-color: #E95420;
+    color: white;
+    border-radius: 6px;
+    margin: 2px;
+}
+
+.header-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+}
+
+/* Barra lateral */
+.sidebar {
+    background-color: #323232;
+    border-right: 1px solid #505050;
+    padding: 10px;
+}
+
+/* Botones de navegación */
+.nav-button {
+    background-color: transparent;
+    border: none;
+    border-radius: 5px;
+    padding: 8px;
+    margin: 2px 0;
+    color: #e6e6e6;
+    font-weight: normal;
+    transition: all 0.2s ease;
+}
+
+.nav-button:hover {
+    background-color: rgba(233, 84, 32, 0.2);
+}
+
+.nav-button-active {
+    background-color: rgba(233, 84, 32, 0.3);
+    font-weight: bold;
+    color: #E95420;
+}
+
+/* Frames y separadores */
+frame {
+    border: 1px solid #505050;
+    border-radius: 5px;
+    padding: 2px;
+}
+
+frame > border {
+    border-color: #505050;
+    border-radius: 5px;
+}
+
+frame > label {
+    color: #cccccc;
+    font-weight: bold;
+}
+
+separator {
+    background-color: #505050;
+}
+
+/* Botones */
+button {
+    background-color: #424242;
+    border: 1px solid #505050;
+    border-radius: 4px;
+    padding: 5px 10px;
+    color: #e6e6e6;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    background-color: #505050;
+}
+
+button:active {
+    background-color: #606060;
+}
+
+/* Botones de acción */
+.action-button {
+    background-color: #E95420;
+    color: white;
+    border: none;
+    font-weight: bold;
+}
+
+.action-button:hover {
+    background-color: #fa6838;
+}
+
+/* Entradas de texto */
+entry {
+    background-color: #323232;
+    border: 1px solid #505050;
+    border-radius: 4px;
+    padding: 5px;
+    color: #e6e6e6;
+}
+
+entry:focus {
+    border-color: #E95420;
+}
+
+/* Etiquetas */
+label {
+    color: #e6e6e6;
+}
+
+/* Barras de progreso */
+progressbar {
+    border: 1px solid #505050;
+    border-radius: 4px;
+}
+
+progressbar > trough {
+    background-color: #323232;
+    border-radius: 4px;
+}
+
+progressbar > progress {
+    background-color: #E95420;
+    border-radius: 3px;
+}
+
+/* Pestañas */
+notebook > header {
+    background-color: #323232;
+    border-bottom: 1px solid #505050;
+}
+
+notebook > header > tabs > tab {
+    background-color: #424242;
+    border: 1px solid #505050;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    padding: 4px 10px;
+    color: #bfbfbf;
+}
+
+notebook > header > tabs > tab:checked {
+    background-color: #323232;
+    color: #E95420;
+    font-weight: bold;
+}
+
+/* Área de texto */
+textview {
+    background-color: #323232;
+    color: #e6e6e6;
+    border: 1px solid #505050;
+}
+
+textview > text {
+    background-color: #323232;
+    color: #e6e6e6;
+}
+
+.terminal-view {
+    background-color: #242424;
+    color: #cccccc;
+    font-family: monospace;
+}
+
+/* Barras de desplazamiento */
+scrollbar {
+    background-color: #323232;
+    border-radius: 10px;
+}
+
+scrollbar slider {
+    background-color: #505050;
+    border-radius: 10px;
+}
+
+scrollbar slider:hover {
+    background-color: #606060;
+}
+
+/* Listas y árboles */
+treeview {
+    background-color: #323232;
+    color: #e6e6e6;
+}
+
+treeview:selected {
+    background-color: rgba(233, 84, 32, 0.3);
+    color: #e6e6e6;
+}
+
+treeview header button {
+    background-color: #323232;
+    border: 1px solid #505050;
+    padding: 5px;
+    color: #bfbfbf;
+}
+
+/* Casillas de verificación */
+checkbutton {
+    color: #e6e6e6;
+}
+
+checkbutton check {
+    border: 1px solid #505050;
+    background-color: #323232;
+}
+
+checkbutton check:checked {
+    background-color: #E95420;
+    color: white;
+}
+
+/* Selectores */
+combobox {
+    background-color: #323232;
+    border: 1px solid #505050;
+    border-radius: 4px;
+    color: #e6e6e6;
+}
+
+combobox button {
+    background-color: #323232;
+    border: 1px solid #505050;
+    border-radius: 4px;
+    color: #e6e6e6;
+}
+
+/* Gráficos */
+.chart-bg {
+    background-color: #323232;
+    border: 1px solid #505050;
+    border-radius: 5px;
+}
+
+/* Áreas para estadísticas */
+.stats-panel {
+    background-color: #323232;
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.stats-value {
+    font-size: 16px;
+    font-weight: bold;
+    color: #E95420;
+}
+
+.stats-label {
+    font-size: 12px;
+    color: #bfbfbf;
+}
+
+/* Alertas */
+.alert-info {
+    background-color: #1a3450;
+    color: #77b6ff;
+    border: 1px solid #2a5a8a;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.alert-warning {
+    background-color: #4d3800;
+    color: #ffcc00;
+    border: 1px solid #806000;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.alert-error {
+    background-color: #500000;
+    color: #ff5555;
+    border: 1px solid #800000;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.alert-success {
+    background-color: #103c10;
+    color: #55cc55;
+    border: 1px solid #206020;
+    border-radius: 4px;
+    padding: 10px;
+}

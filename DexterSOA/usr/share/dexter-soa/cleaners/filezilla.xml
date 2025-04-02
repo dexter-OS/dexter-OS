@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    BleachBit
+    Copyright (C) 2008-2021 Andrew Ziem
+    https://www.bleachbit.org
+
+    Este programa es software libre: puede redistribuirlo y/o modificarlo
+    bajo los términos de la Licencia Pública General de GNU, versión 3 de la
+    Licencia, o (a su elección) cualquier versión posterior.
+
+    Este programa se distribuye con la esperanza de que sea útil,
+    pero SIN NINGUNA GARANTÍA; sin incluso la garantía implícita de
+    COMERCIABILIDAD o APTITUD PARA UN PROPÓSITO PARTICULAR.  Vea la
+    Licencia Pública General de GNU para más detalles.
+
+    Debe haber recibido una copia de la Licencia Pública General de GNU
+    junto con este programa.  Si no, vea <http://www.gnu.org/licenses/>.
+
+    @app Filezilla
+    @url https://filezilla-project.org/
+    @os Linux
+    @cleanerversion v1.5.0
+    @cleanerdate 2019-03-21
+    @cleanerby Andrew Ziem (2009-06-24 - 2009-10-04) & Tobias B. Besemer (2019-03-13 - 2019-03-21)
+    @note Mientras no tengamos command="xml", necesitamos eliminar el archivo completo!
+-->
+<cleaner id="filezilla" os="linux">
+  <label>Filezilla</label>
+  <description>Cliente de transferencia de archivos</description>
+  <var name="profile">
+    <value>~/.filezilla</value>
+  </var>
+  <option id="mru">
+    <label>Usados recientemente</label>
+    <description>Eliminar el historial de uso</description>
+    <action command="delete" search="file" path="$$profile$$/recentservers.xml"/>
+  </option>
+  <!-- Opción no para el usuario final !!!
+  <option id="last_server_path">
+    <label>Última ruta del servidor</label>
+    <description>Eliminar la última ruta del servidor</description>
+    <warning>Mientras no tengamos command="xml", necesitamos eliminar el archivo completo! Use esta opción solo si sabe lo que hace!</warning>
+    <action command="delete" search="file" path="$$profile$$/filezilla.xml"/>
+    -->
+  <!--
+    Así es como podría verse una sintaxis de limpieza CleanerML-XML (Parte 5). Tobias.
+    <action command="xml" search="file" path="$$profile$$/filezilla.xml" element="FileZilla3/Settings/Setting" attribute="name=Last Server Path"/>
+    Explicación: Elimina con un "name=value" como valor de "attribute" el contenido de "<element attribute="value">".
+    Ejemplo:
+    <FileZilla3 version="3.32.0" platform="linux">
+        <Settings>
+            <Setting name="Last Server Path">ftp://ftp.demo.org</Setting>
+    -> Elimina "ftp://ftp.demo.org"
+    -->
+  <!--
+    Para más adelante! Sería el Ejemplo Parte4...
+    Explicación: Elimina con "/*" al final el contenido del elemento.
+    <action command="xml" search="file" path="$$profile$$/filezilla.xml" element="FileZilla3/Settings/LastServer/*"/>
+    -->
+  <!--
+  </option>
+  -->
+</cleaner>

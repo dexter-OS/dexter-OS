@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cleaner id="browser_cache">
+  <label>Caché del Navegador</label>
+  <description>Limpiar archivos temporales de navegadores web</description>
+  <option id="firefox">
+    <label>Mozilla Firefox</label>
+    <description>Limpiar archivos de caché de Firefox</description>
+    <action command="delete" path="~/.mozilla/firefox/*/Cache/*"/>
+    <action command="delete" path="~/.cache/mozilla/firefox/*/cache2/*"/>
+  </option>
+  <option id="chrome">
+    <label>Google Chrome</label>
+    <description>Limpiar archivos de caché de Chrome</description>
+    <action command="delete" path="~/.cache/google-chrome/Default/Cache/*"/>
+    <action command="delete" path="~/.config/google-chrome/Default/Cache/*"/>
+  </option>
+</cleaner>
+    
