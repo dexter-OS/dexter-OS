@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fondo circular con gradiente oscuro -->
+  <circle cx="256" cy="256" r="248" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="16"/>
+  
+  <!-- Anillo exterior con degradado -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="url(#outerGradient)" stroke-width="24" stroke-linecap="round"/>
+  
+  <!-- Elementos decorativos -->
+  <path d="M256 76 C 150 76, 76 150, 76 256 C 76 362, 150 436, 256 436" fill="none" stroke="#00e5ff" stroke-width="12" stroke-linecap="round" stroke-dasharray="30,18"/>
+  
+  <!-- Elementos de organización (estilo de documentos apilados) -->
+  <rect x="186" y="166" width="160" height="180" rx="10" fill="#0d0d1a" stroke="#00e5ff" stroke-width="4"/>
+  <rect x="176" y="156" width="160" height="180" rx="10" fill="#0d0d1a" stroke="#ff2a93" stroke-width="4"/>
+  <rect x="166" y="146" width="160" height="180" rx="10" fill="#0d0d1a" stroke="#00e5ff" stroke-width="4"/>
+  
+  <!-- Líneas de texto simuladas en los documentos -->
+  <line x1="196" y1="186" x2="286" y2="186" stroke="#ff2a93" stroke-width="4"/>
+  <line x1="196" y1="206" x2="266" y2="206" stroke="#00e5ff" stroke-width="4"/>
+  <line x1="196" y1="226" x2="276" y2="226" stroke="#00e5ff" stroke-width="4"/>
+  <line x1="196" y1="246" x2="256" y2="246" stroke="#ff2a93" stroke-width="4"/>
+  <line x1="196" y1="266" x2="286" y2="266" stroke="#00e5ff" stroke-width="4"/>
+  <line x1="196" y1="286" x2="276" y2="286" stroke="#ff2a93" stroke-width="4"/>
+  
+  <!-- Letra "D" estilizada -->
+  <path d="M256 360 
+           C 280 360, 300 350, 310 330 
+           C 320 310, 320 280, 310 260 
+           C 300 240, 280 230, 256 230 
+           L 226 230 
+           L 226 360 
+           Z" 
+        fill="url(#letterGradient)" stroke="#001a29" stroke-width="4"/>
+  
+  <!-- Círculos decorativos -->
+  <circle cx="376" cy="156" r="16" fill="#0d0d1a" stroke="#00e5ff" stroke-width="4"/>
+  <circle cx="376" cy="156" r="8" fill="#ff2a93"/>
+  <circle cx="136" cy="356" r="16" fill="#0d0d1a" stroke="#ff2a93" stroke-width="4"/>
+  <circle cx="136" cy="356" r="8" fill="#00e5ff"/>
+  
+  <!-- Definiciones de gradientes -->
+  <defs>
+    <linearGradient id="outerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="50%" stop-color="#00e5ff" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#ff2a93"/>
+    </linearGradient>
+    <linearGradient id="letterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#ff2a93"/>
+    </linearGradient>
+  </defs>
+</svg>
