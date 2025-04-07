@@ -94,6 +94,7 @@ class DexterOrganizer(Gtk.Application):
         btn_menu = Gtk.MenuButton()
         btn_menu.set_icon_name("open-menu-symbolic")
         btn_menu.set_has_frame(False)
+        btn_menu.set_css_classes(["menu-button"])
 
         # Crear menú popover estilizado
         menu_model = Gio.Menu()
