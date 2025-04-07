@@ -1,0 +1,17 @@
+Package: dexter-organizer
+Version: 1.0
+Architecture: all
+Maintainer: Victor Oubiña <oubinav78@gmail.com>
+Installed-Size: 328
+Depends: python3 (>= 3.7), python3-tk, python3-pil
+Section: utils
+Priority: optional
+Essential: no
+Description: Herramienta de organización de manuales y textos
+ Una aplicación de escritorio para organizar y gestionar manuales personales,
+ documentación y textos. Presenta una interfaz dividida con un panel lateral
+ para navegación y un panel principal para mostrar contenido.
+ .
+ La aplicación se adapta al tema del sistema (claro/oscuro), se ejecuta en
+ modo pantalla completa y proporciona capacidades de edición integradas para
+ modificar el contenido directamente desde la interfaz.

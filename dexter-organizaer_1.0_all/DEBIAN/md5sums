@@ -1,0 +1,9 @@
+23d17874a8301f8362e01df02f2406d4  usr/bin/dexter-organizer
+9180fe3cff692dec1c46eb160bc83dac  usr/share/doc/dexter-organizer/copyright
+6c97fc9823990abf3c174e807a4eec64  usr/share/doc/dexter-organizer/changelog.gz
+45608089086ec321b082bc2282439f13  usr/share/icons/hicolor/scalable/apps/dexter-organizer.svg
+e4c2a629103687868633b43c4a34f751  usr/share/dexter-organizer/dexter-organizer.py
+13c793b4e1a1c635907c8b5a924e7da8  usr/share/dexter-organizer/modules/dexter_editor.py
+12f80e10d52c6e9947f1d38566dc6601  usr/share/dexter-organizer/modules/dexter_file_manager.py
+4473feffcf9149356aaafddd89b4e37f  usr/share/dexter-organizer/modules/dexter_backup.py
+9c0bc7b2a7da62dd4165a484f5cd6e09  usr/share/applications/dexter-organizer.desktop

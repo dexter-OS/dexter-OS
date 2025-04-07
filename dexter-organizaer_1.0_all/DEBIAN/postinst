@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+# Establecer permisos
+chmod +x /usr/bin/dexter-organizer
+chmod +x /usr/share/dexter-organizer/dexter-organizer.py
+
+# Actualizar la caché de aplicaciones de escritorio
+if [ -x "$(command -v update-desktop-database)" ]; then
+    update-desktop-database -q
+fi
+
+# Actualizar la caché de iconos
+if [ -x "$(command -v gtk-update-icon-cache)" ]; then
+    gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor
+fi
+
+exit 0
