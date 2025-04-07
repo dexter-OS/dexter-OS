@@ -1,0 +1,237 @@
+/* Dexter Organizer - Estilos personalizados mejorados */
+
+/* Variables de color para facilitar cambios globales */
+@define-color accent_color #3584e4;
+@define-color hover_color alpha(@accent_color, 0.1);
+@define-color header_bg_color alpha(black, 0.15);
+@define-color sidebar_bg_color alpha(black, 0.08);
+@define-color divider_color alpha(white, 0.1);
+@define-color modified_color #e74c3c;
+
+/* Etiqueta de archivo modificado */
+.modified {
+    color: @modified_color;
+    font-weight: bold;
+}
+
+/* Mejoras para el encabezado - hacerlo más distintivo */
+.header-box {
+    padding: 12px;
+    margin: 0;
+    background-color: @header_bg_color;
+    border-bottom: 2px solid @accent_color;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Estilos para los botones del encabezado */
+.header-box button {
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: all 200ms ease;
+    border: 1px solid transparent;
+}
+
+.header-box button:hover {
+    background-color: alpha(@accent_color, 0.2);
+    border: 1px solid alpha(@accent_color, 0.3);
+}
+
+.header-box button:active {
+    background-color: alpha(@accent_color, 0.3);
+}
+
+/* Grupos de botones en el encabezado */
+.left-buttons button {
+    margin-right: 4px;
+}
+
+.right-buttons button {
+    margin-left: 4px;
+}
+
+/* Personalización del panel de categorías */
+frame {
+    border: none;
+    border-radius: 0;
+}
+
+/* Título del panel de categorías */
+frame > label:first-child {
+    font-size: 15px;
+    font-weight: bold;
+    background-color: rgba(42, 48, 60, 0.8);
+    color: rgba(255, 255, 255, 0.9);
+    border-bottom: 5px solid @accent_color;
+    padding: 8px 12px;
+    margin: 0;
+    border-radius: 5px 5px 0 0;
+    border-top: none; /* Asegurar que no haya borde superior */
+    border-left: none; /* Asegurar que no haya borde izquierdo */
+    border-right: none;
+}
+
+frame, scrolledwindow {
+    border: none;
+}
+
+/* Panel lateral de categorías con fondo distintivo */
+.categories-panel {
+    background-color: #1f2129;
+    color: white;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Estilo para el título de la aplicación */
+.app-title {
+    font-size: 18px;
+    font-weight: bold;
+    padding: 15px 10px 5px 10px;
+    margin: 0;
+    color: white;
+}
+
+.app-subtitle {
+    font-size: 11px;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0 10px 15px 10px;
+    margin-top: -5px;
+}
+
+/* Eliminar título del frame */
+.categories-panel > label {
+    opacity: 0;
+    padding: 0;
+    margin: 0;
+}
+
+/* Si es un borde interno del frame */
+.categories-panel > border {
+  border-color: rgba(30, 34, 42, 0.6);
+}
+
+/* Mejorar apariencia del TreeView */
+treeview {
+    background: transparent;
+    padding: 4px;
+}
+
+treeview:selected {
+    background-color: @accent_color;
+    color: white;
+    border-radius: 4px;
+}
+
+treeview row {
+    padding: 4px 0;
+    border-radius: 4px;
+}
+
+treeview row:not(:selected):hover {
+    background-color: alpha(@accent_color, 0.1);
+}
+
+/* TreeView dentro del panel de categorías */
+.categories-panel treeview {
+    background-color: transparent;
+    padding: 8px 5px;
+}
+
+.categories-panel treeview row {
+    padding: 6px 4px;
+    border-radius: 4px;
+    margin: 1px 4px;
+}
+
+.categories-panel treeview row:hover:not(:selected) {
+    background-color: rgba(74, 85, 104, 0.2);
+}
+
+.categories-panel treeview row:selected {
+    background-color: @accent_color;
+    color: white;
+}
+
+/* Estilo para scrollbars en el panel */
+.categories-panel scrolledwindow {
+    border: none;
+    background-color: transparent;
+}
+
+.categories-panel scrollbar {
+    background-color: transparent;
+}
+
+.categories-panel scrollbar slider {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    min-width: 6px;
+    min-height: 6px;
+}
+
+.categories-panel scrollbar slider:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Mejorar el separador vertical para que sea más elegante */
+separator.vertical {
+    min-width: 2px;
+    background-color: @accent_color;
+    margin: 0;
+    padding: 0;
+    border: none;
+    opacity: 1.0;
+}
+
+/* Estilo para el panel de información de archivo */
+.info-bar {
+    padding: 8px 12px;
+    background-color: alpha(@header_bg_color, 0.7);
+    border-bottom: 1px solid @divider_color;
+}
+
+/* Estilos para el editor y panel de visualización */
+textview, sourceview {
+    padding: 10px;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+scrolledwindow {
+    border: none;
+}
+
+/* Personalización de widgets dentro del editor */
+textview border, sourceview border {
+    border: none;
+}
+
+/* Diálogos con mejor apariencia */
+dialog {
+    padding: 16px;
+    border-radius: 8px;
+}
+
+dialog .dialog-action-area {
+    margin-top: 16px;
+}
+
+/* Estilo para los botones de HTML */
+.html-buttons {
+    padding: 8px;
+    background-color: alpha(@header_bg_color, 0.7);
+    border-bottom: 1px solid @divider_color;
+}
+
+.html-buttons button {
+    border-radius: 4px;
+    transition: all 200ms ease;
+}
+
+/* Combo box de temas con mejor apariencia */
+combobox button {
+    border-radius: 4px;
+    padding: 6px 8px;
+}
