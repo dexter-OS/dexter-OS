@@ -1,7 +1,0 @@
-#!/bin/bash
-set -e
-
-# Detener cualquier instancia en ejecución
-pkill -f dexter-soa || true
-
-exit 0
