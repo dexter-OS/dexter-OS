@@ -1,0 +1,5 @@
+#!/bin/bash
+# Script de inicio para Dexter-Organizer
+
+# Ejecutar desde la ubicación correcta
+python3 /usr/share/dexter-organizer/dexter-organizer.py "$@"
