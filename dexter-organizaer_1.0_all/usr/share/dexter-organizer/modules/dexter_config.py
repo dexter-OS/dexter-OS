@@ -1,29 +1,31 @@
-# dexter_config.py
-
 import gi
-gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk
+gi.require_version('Gtk', '4.0')
+from gi.repository import Gtk, Gio, GLib
 
-class ConfigView(Gtk.Box):
+class DexterOrganizerApp(Gtk.Application):
     def __init__(self):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=20, margin_top=40)
-        self.set_hexpand(True)
-        self.set_vexpand(True)
-        self.set_margin_start(20)
-        self.set_margin_end(20)
+        super().__init__(application_id='org.example.DexterOrganizer')
+        self.builder = None
 
-        self.backup_button = Gtk.Button(label="Realizar Backup")
-        self.backup_button.connect("clicked", self.on_backup_clicked)
+    def do_activate(self, app):
+        self.builder = Gtk.Builder.new_from_file('dexter.ui')
+        window = self.builder.get_object('main_window')
+        window.set_application(app)
 
-        self.restore_button = Gtk.Button(label="Restaurar Backup")
-        self.restore_button.connect("clicked", self.on_restore_clicked)
+        self.stack = self.builder.get_object('main_stack')
 
-        self.append(self.backup_button)
-        self.append(self.restore_button)
+        # Conectar botones del menú
+        self.builder.get_object('about_button').connect('clicked', self.on_about_clicked)
+        self.builder.get_object('preferences_button').connect('clicked', self.on_preferences_clicked)
 
-    def on_backup_clicked(self, button):
-        print(">> Realizando backup... (aquí va la lógica de backup)")
+        window.present()
 
-    def on_restore_clicked(self, button):
-        print(">> Restaurando backup... (aquí va la lógica de restauración)")
+    def on_about_clicked(self, button):
+        self.stack.set_visible_child_name("about")
 
+    def on_preferences_clicked(self, button):
+        self.stack.set_visible_child_name("preferences")
+
+
+app = DexterOrganizerApp()
+app.run()
