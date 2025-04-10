@@ -2,17 +2,20 @@
 
 """
 Dexter Organizer - Aplicación para organización de documentos
-Author: Victor oubiña Faubel - oubinav78@gmail.com
+Author: Victor Oubiña Faubel - oubinav78@gmail.com
 Website: https://sourceforge.net/projects/dexter-gnome/
 """
 
 import os
 import sys
-import json
 import gi
 gi.require_version('Gtk', '3.0')
-gi.require_version('WebKit2', '4.0')
-from gi.repository import Gtk, Gdk, GLib, Gio, WebKit2, Pango
+from gi.repository import Gtk, Gdk, GLib, Gio, Pango
+
+# Importar módulos propios
+from modules.dexter_editor import DexterEditor
+from modules.dexter_file_manager import DexterFileManager
+from modules.dexter_backup import DexterBackup
 
 class DexterOrganizer(Gtk.Application):
     def __init__(self):
@@ -20,30 +23,17 @@ class DexterOrganizer(Gtk.Application):
                                  flags=Gio.ApplicationFlags.FLAGS_NONE)
         self.connect("activate", self.on_activate)
         self.window = None
-        self.categories = {}
         self.current_category = None
         self.current_document = None
-        self.edit_mode = False
-        self.data_path = os.path.join(GLib.get_user_data_dir(), "dexter-organizer")
-        self.data_file = os.path.join(self.data_path, "data.json")
-        
-        # Asegurar que el directorio de datos existe
-        if not os.path.exists(self.data_path):
-            os.makedirs(self.data_path)
-            
-        # Inicializar documentos y carpeta
-        self.documents_path = os.path.join(self.data_path, "documents")
-        if not os.path.exists(self.documents_path):
-            os.makedirs(self.documents_path)
-            
-        # Cargar datos al iniciar
-        self.load_data()
         self.dark_theme = True
+        
+        # Inicializar el gestor de archivos
+        self.file_manager = DexterFileManager(self)
+        self.categories = self.file_manager.categories
 
     def on_activate(self, app):
         # Verificar si ya hay una instancia en ejecución
         if not self.window:
-        
             self.load_css_theme()
             
             # Crear ventana principal
@@ -59,12 +49,12 @@ class DexterOrganizer(Gtk.Application):
             self.window.set_position(Gtk.WindowPosition.CENTER)
             self.window.set_name("main-window")
             
-            # Añadir justo antes de headerbar.pack_end(menu_button)
+            # Selector de tema
             theme_switch = Gtk.Switch()
             theme_switch.set_active(self.dark_theme)
             theme_switch.connect("notify::active", self.on_theme_switch_activated)
 
-            # Para añadir los iconos (opcional)
+            # Iconos para el selector de tema
             moon_icon = Gtk.Image.new_from_icon_name("weather-clear-night-symbolic", Gtk.IconSize.SMALL_TOOLBAR)
             sun_icon = Gtk.Image.new_from_icon_name("weather-clear-symbolic", Gtk.IconSize.SMALL_TOOLBAR)
 
@@ -325,48 +315,11 @@ class DexterOrganizer(Gtk.Application):
             self.content_panel.add_named(config_page, "config")
             self.content_panel.add_named(about_page, "about")
             
-            # Área de texto para editar documentos
-            self.document_view_stack = Gtk.Stack()
-            self.document_view_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+            # Inicializar el editor de documentos
+            self.editor = DexterEditor(self)
             
-            # Vista de texto
-            self.text_view = Gtk.TextView()
-            self.text_view.set_wrap_mode(Gtk.WrapMode.WORD)
-            self.text_view.get_style_context().add_class("document-text-view")
-            self.text_buffer = self.text_view.get_buffer()
-            
-            text_scroll = Gtk.ScrolledWindow()
-            text_scroll.add(self.text_view)
-            
-            # Vista web para HTML
-            self.web_view = WebKit2.WebView()
-            web_scroll = Gtk.ScrolledWindow()
-            web_scroll.add(self.web_view)
-            
-            self.document_view_stack.add_named(text_scroll, "text")
-            self.document_view_stack.add_named(web_scroll, "web")
-            
-            # Contenedor para los documentos con barra de herramientas
-            self.document_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            
-            # Barra de herramientas de documento
-            self.doc_toolbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-            self.doc_toolbar.get_style_context().add_class("doc-toolbar")
-            
-            self.view_mode_button = Gtk.Button(label="Vista Web")
-            self.view_mode_button.connect("clicked", self.toggle_view_mode)
-            self.view_mode_button.set_sensitive(False)
-            self.view_mode_button.get_style_context().add_class("view-mode-button")
-            
-            save_button = Gtk.Button(label="Guardar")
-            save_button.connect("clicked", self.on_save_document)
-            save_button.get_style_context().add_class("save-button")
-            
-            self.doc_toolbar.pack_start(self.view_mode_button, False, False, 0)
-            self.doc_toolbar.pack_end(save_button, False, False, 0)
-            
-            self.document_container.pack_start(self.doc_toolbar, False, False, 0)
-            self.document_container.pack_start(self.document_view_stack, True, True, 0)
+            # Inicializar el módulo de backup
+            self.backup = DexterBackup(self)
             
             # Añadir al panel principal
             main_panel.pack_start(toolbar, False, False, 0)
@@ -381,10 +334,6 @@ class DexterOrganizer(Gtk.Application):
             
             # Mostrar todo
             self.window.show_all()
-            
-            # Ocultar el botón de guardar inicialmente
-            save_button.set_visible(False)
-            self.doc_toolbar.set_visible(False)
 
     def on_theme_switch_activated(self, switch, gparam):
         self.dark_theme = switch.get_active()
@@ -400,26 +349,6 @@ class DexterOrganizer(Gtk.Application):
             css_provider,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
-    
-    def load_data(self):
-        if os.path.exists(self.data_file):
-            try:
-                with open(self.data_file, 'r') as f:
-                    data = json.load(f)
-                    self.categories = data.get('categories', {})
-            except (json.JSONDecodeError, IOError) as e:
-                print(f"Error al cargar datos: {e}")
-                self.categories = {}
-        else:
-            self.categories = {}
-            self.save_data()
-    
-    def save_data(self):
-        try:
-            with open(self.data_file, 'w') as f:
-                json.dump({'categories': self.categories}, f, indent=4)
-        except IOError as e:
-            print(f"Error al guardar datos: {e}")
     
     def load_categories(self):
         # Limpiar el panel de categorías
@@ -593,66 +522,36 @@ class DexterOrganizer(Gtk.Application):
     def on_document_clicked(self, button, category_name, doc_id):
         print(f"Documento seleccionado: {category_name} - {doc_id}")
     
+        # Actualizar el estado actual
         self.current_category = category_name
         self.current_document = doc_id
-        self.edit_mode = False
         
         # Actualizar la visualización de la categoría y documento seleccionados
         self.update_selected_document(category_name, doc_id)
-    
-        doc_info = self.categories[category_name][doc_id]
-        doc_path = os.path.join(self.documents_path, doc_id)
         
-        # Leer el contenido del documento
-        try:
-            with open(doc_path, 'r') as f:
-                content = f.read()
-            print(f"Contenido del documento: {content[:100]}...")
-        except IOError:
-            print(f"Error al leer el documento: {e}")
-            content = ""
+        # Forzar procesamiento de eventos inmediatamente
+        while Gtk.events_pending():
+            Gtk.main_iteration()
         
-        # Configurar el área de texto
-        self.text_buffer.set_text(content)
-        self.text_view.set_editable(False)
-        
-        # Configurar el botón de modo de vista
-        is_html = doc_info['type'] == 'html'
-        self.view_mode_button.set_sensitive(is_html)
-        
-        # Mostrar en modo texto por defecto
-        self.document_view_stack.set_visible_child_name("text")
-        
-        # Si es HTML, también cargar en webview
-        if is_html:
-            self.web_view.load_html(content, None)
-        
-        # Mostrar la barra de herramientas del documento
-        self.doc_toolbar.set_visible(True)
-        
-        # Botón guardar no visible en modo lectura
-        for child in self.doc_toolbar.get_children():
-            if isinstance(child, Gtk.Button) and child.get_label() == "Guardar":
-                child.set_visible(False)
-        
-        # Añadir y mostrar el contenedor de documento
-        if self.content_panel.get_child_by_name("document_view"):
-            self.content_panel.remove(self.content_panel.get_child_by_name("document_view"))
-        
-        self.content_panel.add_named(self.document_container, "document_view")
+        # Mostrar el documento explícitamente
+        print(f"Mostrando documento: {category_name}/{doc_id}")
         self.content_panel.set_visible_child_name("document_view")
+        result = self.editor.show_document(category_name, doc_id)
         
-        print("Documento mostrado en el contenedor")
+        # Forzar actualización de la interfaz
+        self.window.queue_draw()
+        
+        # Procesar eventos pendientes para asegurar la actualización completa
+        while Gtk.events_pending():
+            Gtk.main_iteration()
+            
+        if not result:
+            self.show_error_dialog(f"Error al abrir el documento: {doc_id}")
     
-    def toggle_view_mode(self, button):
-        current_mode = self.document_view_stack.get_visible_child_name()
-        
-        if current_mode == "text":
-            self.document_view_stack.set_visible_child_name("web")
-            button.set_label("Vista Código")
-        else:
-            self.document_view_stack.set_visible_child_name("text")
-            button.set_label("Vista Web")
+    def on_edit_clicked(self, button):
+        if self.current_document and self.current_category:
+            # Activar el modo edición usando el editor
+            self.editor.enable_edit_mode()
     
     def on_add_clicked(self, button):
         # Diálogo para añadir nuevo documento o categoría
@@ -805,7 +704,7 @@ class DexterOrganizer(Gtk.Application):
                 if category_name:
                     if category_name not in self.categories:
                         self.categories[category_name] = {}
-                        self.save_data()
+                        self.file_manager.save_data(self.categories)
                         self.load_categories()
                     else:
                         self.show_error_dialog("La categoría ya existe.")
@@ -842,69 +741,38 @@ class DexterOrganizer(Gtk.Application):
                         selected_category = "Documentos"
                         self.categories[selected_category] = {}
                 
-                    # Crear el documento
-                    doc_id = f"{doc_name.lower().replace(' ', '_')}_{GLib.get_monotonic_time()}"
-                    self.categories[selected_category][doc_id] = {
-                        'name': doc_name,
-                        'type': doc_type,
-                        'created': GLib.get_monotonic_time()
-                    }
-                
-                    # Crear archivo físico
-                    doc_path = os.path.join(self.documents_path, doc_id)
-                    with open(doc_path, 'w') as f:
-                        f.write("")
-                
-                    self.save_data()
-                    self.load_categories()
-                
-                    # Abrir el documento creado
-                    self.current_category = selected_category
-                    self.current_document = doc_id
-                    self.on_document_clicked(None, selected_category, doc_id)
-                    self.on_edit_clicked(None)  # Iniciar en modo edición
-                else:
-                    self.show_error_dialog("Nombre de documento vacío.")
+                    # Crear el documento utilizando el FileManager
+                    doc_id = self.file_manager.create_document(selected_category, doc_name, doc_type)
+                    
+                    if doc_id:
+                        # Actualizar la interfaz
+                        self.load_categories()
+                        
+                        # Abrir el documento creado
+                        self.current_category = selected_category
+                        self.current_document = doc_id
+                        
+                        print(f"Abriendo documento recién creado: {selected_category}/{doc_id}")
+                        
+                        # Mostrar el documento
+                        result = self.editor.show_document(selected_category, doc_id)
+                        
+                        # Procesar eventos pendientes
+                        while Gtk.events_pending():
+                            Gtk.main_iteration()
+                            
+                        # Activar modo edición directamente en el editor
+                        self.editor.enable_edit_mode()
+
+                        # Forzar actualización final
+                        self.window.show_all()
+
+                        # Mantener el botón guardar visible
+                        self.editor.save_button.set_visible(True)
+
+                        print("Documento creado y abierto en modo edición")
     
         dialog.destroy()
-    
-    def on_edit_clicked(self, button):
-        if self.current_document and self.current_category:
-            self.edit_mode = True
-            self.text_view.set_editable(True)
-            
-            # Mostrar botón guardar
-            for child in self.doc_toolbar.get_children():
-                if isinstance(child, Gtk.Button) and child.get_label() == "Guardar":
-                    child.set_visible(True)
-    
-    def on_save_document(self, button):
-        if self.current_document and self.current_category:
-            # Obtener contenido actualizado
-            start, end = self.text_buffer.get_bounds()
-            content = self.text_buffer.get_text(start, end, True)
-            
-            # Guardar contenido
-            doc_path = os.path.join(self.documents_path, self.current_document)
-            try:
-                with open(doc_path, 'w') as f:
-                    f.write(content)
-                
-                # Si es HTML, actualizar la vista web
-                doc_info = self.categories[self.current_category][self.current_document]
-                if doc_info['type'] == 'html':
-                    self.web_view.load_html(content, None)
-                
-                # Volver a modo lectura
-                self.edit_mode = False
-                self.text_view.set_editable(False)
-                
-                # Ocultar botón guardar
-                for child in self.doc_toolbar.get_children():
-                    if isinstance(child, Gtk.Button) and child.get_label() == "Guardar":
-                        child.set_visible(False)
-            except IOError as e:
-                self.show_error_dialog(f"Error al guardar: {e}")
     
     def on_delete_clicked(self, button):
         if self.current_category:
@@ -917,18 +785,6 @@ class DexterOrganizer(Gtk.Application):
         else:
             self.show_info_dialog("Para eliminar, primero seleccione una categoría o documento.")
 
-    def show_info_dialog(self, message):
-        """Muestra un diálogo informativo"""
-        dialog = Gtk.MessageDialog(
-            transient_for=self.window,
-            flags=0,
-            message_type=Gtk.MessageType.INFO,
-            buttons=Gtk.ButtonsType.OK,
-            text=message
-        )
-        dialog.run()
-        dialog.destroy()
-    
     def delete_document(self):
         dialog = Gtk.MessageDialog(
             transient_for=self.window,
@@ -942,24 +798,16 @@ class DexterOrganizer(Gtk.Application):
         dialog.destroy()
         
         if response == Gtk.ResponseType.YES:
-            # Eliminar físicamente el archivo
-            doc_path = os.path.join(self.documents_path, self.current_document)
-            try:
-                if os.path.exists(doc_path):
-                    os.remove(doc_path)
-            except OSError as e:
-                print(f"Error al eliminar archivo: {e}")
-            
-            # Eliminar de los datos
-            del self.categories[self.current_category][self.current_document]
-            self.save_data()
-            
-            # Recargar la interfaz
-            self.load_categories()
-            
-            # Mostrar la vista de categoría
-            self.on_category_clicked(None, self.current_category)
-            self.current_document = None
+            # Eliminar documento usando el FileManager
+            if self.file_manager.delete_document(self.current_category, self.current_document):
+                # Recargar la interfaz
+                self.load_categories()
+                
+                # Mostrar la vista de categoría
+                self.on_category_clicked(None, self.current_category)
+                self.current_document = None
+            else:
+                self.show_error_dialog("Error al eliminar el documento.")
     
     def delete_category(self):
         dialog = Gtk.MessageDialog(
@@ -974,60 +822,17 @@ class DexterOrganizer(Gtk.Application):
         dialog.destroy()
         
         if response == Gtk.ResponseType.YES:
-            # Eliminar físicamente todos los archivos de la categoría
-            for doc_id in self.categories[self.current_category]:
-                doc_path = os.path.join(self.documents_path, doc_id)
-                try:
-                    if os.path.exists(doc_path):
-                        os.remove(doc_path)
-                except OSError as e:
-                    print(f"Error al eliminar archivo: {e}")
-            
-            # Eliminar la categoría
-            del self.categories[self.current_category]
-            self.save_data()
-            
-            # Recargar la interfaz
-            self.load_categories()
-            
-            # Mostrar pantalla de bienvenida
-            self.content_panel.set_visible_child_name("welcome")
-            self.current_category = None
-            self.current_document = None
-    
-    def toggle_theme(self, button):
-        # Cargar proveedores de CSS
-        css_provider_light = Gtk.CssProvider()
-        css_provider_dark = Gtk.CssProvider()
-    
-        # Rutas a los archivos CSS de temas
-        css_light_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "dexter_light.css")
-        css_dark_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "dexter_dark.css")
-    
-        # Obtener el contexto de estilo actual
-        screen = Gdk.Screen.get_default()
-    
-        try:
-            # Cargar los archivos CSS
-            css_provider_light.load_from_path(css_light_file)
-            css_provider_dark.load_from_path(css_dark_file)
-        
-            # Obtener la configuración actual de temas
-            settings = Gtk.Settings.get_default()
-
-            if button.get_active():
-                # Cambiar a tema oscuro
-                settings.set_property("gtk-application-prefer-dark-theme", True)
-                Gtk.StyleContext.remove_provider_for_screen(screen, css_provider_light)
-                Gtk.StyleContext.add_provider_for_screen(screen, css_provider_dark, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+            # Eliminar categoría usando el FileManager
+            if self.file_manager.delete_category(self.current_category):
+                # Recargar la interfaz
+                self.load_categories()
+                
+                # Mostrar pantalla de bienvenida
+                self.content_panel.set_visible_child_name("welcome")
+                self.current_category = None
+                self.current_document = None
             else:
-                # Cambiar a tema claro
-                settings.set_property("gtk-application-prefer-dark-theme", False)
-                Gtk.StyleContext.remove_provider_for_screen(screen, css_provider_dark)
-                Gtk.StyleContext.add_provider_for_screen(screen, css_provider_light, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-    
-        except Exception as e:
-            print(f"Error al cambiar el tema: {e}")
+                self.show_error_dialog("Error al eliminar la categoría.")
     
     def on_menu_clicked(self, button):
         # Asegurarse de que el popover esté visible y se muestre correctamente
@@ -1041,238 +846,14 @@ class DexterOrganizer(Gtk.Application):
     def on_about_clicked(self, button):
         self.popover.popdown()
         self.content_panel.set_visible_child_name("about")
-        
+    
     def on_create_backup_clicked(self, button):
-        file_chooser = Gtk.FileChooserDialog(
-            title="Guardar copia de seguridad",
-            parent=self.window,
-            action=Gtk.FileChooserAction.SELECT_FOLDER,
-            buttons=(
-                "Cancelar", Gtk.ResponseType.CANCEL,
-                "Guardar", Gtk.ResponseType.ACCEPT
-            )
-        )
-        
-        file_chooser.set_default_size(800, 600)
-        
-        response = file_chooser.run()
-        
-        if response == Gtk.ResponseType.ACCEPT:
-            folder_path = file_chooser.get_filename()
-            file_chooser.destroy()
-            
-            # Mostrar diálogo de progreso
-            progress_dialog = Gtk.Dialog(
-                title="Creando copia de seguridad",
-                parent=self.window,
-                flags=Gtk.DialogFlags.MODAL
-            )
-            progress_dialog.set_default_size(300, 100)
-            
-            content_area = progress_dialog.get_content_area()
-            content_area.set_margin_top(15)
-            content_area.set_margin_bottom(15)
-            content_area.set_margin_start(15)
-            content_area.set_margin_end(15)
-            content_area.set_spacing(10)
-            
-            label = Gtk.Label(label="Creando copia de seguridad, por favor espere...")
-            progress_bar = Gtk.ProgressBar()
-            progress_bar.pulse()
-            
-            content_area.pack_start(label, False, False, 0)
-            content_area.pack_start(progress_bar, False, False, 0)
-            
-            progress_dialog.show_all()
-            
-            # Realizar backup en segundo plano
-            def backup_task():
-                backup_path = self.create_backup(folder_path)
-                
-                GLib.idle_add(progress_dialog.destroy)
-                
-                if backup_path:
-                    GLib.idle_add(self.show_success_dialog, f"Copia de seguridad creada correctamente en:\n{backup_path}")
-                else:
-                    GLib.idle_add(self.show_error_dialog, "Error al crear la copia de seguridad.")
-                
-                return False
-            
-            # Mantener el progreso animado
-            def pulse_progress():
-                progress_bar.pulse()
-                return True
-            
-            # Iniciar animación
-            GLib.timeout_add(100, pulse_progress)
-            
-            # Iniciar tarea en segundo plano
-            GLib.idle_add(backup_task)
-        else:
-            file_chooser.destroy()
+        # Usar el módulo de backup
+        self.backup.show_create_backup_dialog()
 
     def on_restore_backup_clicked(self, button):
-        file_chooser = Gtk.FileChooserDialog(
-            title="Seleccionar copia de seguridad",
-            parent=self.window,
-            action=Gtk.FileChooserAction.OPEN,
-            buttons=(
-                "Cancelar", Gtk.ResponseType.CANCEL,
-                "Abrir", Gtk.ResponseType.ACCEPT
-            )
-        )
-        
-        file_chooser.set_default_size(800, 600)
-        
-        # Filtro para archivos zip
-        filter_zip = Gtk.FileFilter()
-        filter_zip.set_name("Archivos ZIP")
-        filter_zip.add_pattern("*.zip")
-        file_chooser.add_filter(filter_zip)
-        
-        response = file_chooser.run()
-        
-        if response == Gtk.ResponseType.ACCEPT:
-            backup_path = file_chooser.get_filename()
-            file_chooser.destroy()
-            
-            # Confirmar restauración
-            confirm_dialog = Gtk.MessageDialog(
-                transient_for=self.window,
-                flags=0,
-                message_type=Gtk.MessageType.WARNING,
-                buttons=Gtk.ButtonsType.YES_NO,
-                text="¿Está seguro de que desea restaurar esta copia de seguridad?"
-            )
-            confirm_dialog.format_secondary_text(
-                "Esta acción reemplazará todas las categorías y documentos actuales. "
-                "Los datos no se podrán recuperar una vez realizada la restauración."
-            )
-            
-            confirm_response = confirm_dialog.run()
-            confirm_dialog.destroy()
-            
-            if confirm_response == Gtk.ResponseType.YES:
-                # Mostrar diálogo de progreso
-                progress_dialog = Gtk.Dialog(
-                    title="Restaurando copia de seguridad",
-                    parent=self.window,
-                    flags=Gtk.DialogFlags.MODAL
-                )
-                progress_dialog.set_default_size(300, 100)
-                
-                content_area = progress_dialog.get_content_area()
-                content_area.set_margin_top(15)
-                content_area.set_margin_bottom(15)
-                content_area.set_margin_start(15)
-                content_area.set_margin_end(15)
-                content_area.set_spacing(10)
-                
-                label = Gtk.Label(label="Restaurando copia de seguridad, por favor espere...")
-                progress_bar = Gtk.ProgressBar()
-                progress_bar.pulse()
-                
-                content_area.pack_start(label, False, False, 0)
-                content_area.pack_start(progress_bar, False, False, 0)
-                
-                progress_dialog.show_all()
-                
-                # Realizar restauración en segundo plano
-                def restore_task():
-                    success = self.restore_backup(backup_path)
-                    
-                    GLib.idle_add(progress_dialog.destroy)
-                    
-                    if success:
-                        GLib.idle_add(self.show_success_dialog, "Copia de seguridad restaurada correctamente.")
-                    else:
-                        GLib.idle_add(self.show_error_dialog, "Error al restaurar la copia de seguridad.")
-                    
-                    return False
-                
-                # Mantener el progreso animado
-                def pulse_progress():
-                    progress_bar.pulse()
-                    return True
-                
-                # Iniciar animación
-                GLib.timeout_add(100, pulse_progress)
-                
-                # Iniciar tarea en segundo plano
-                GLib.idle_add(restore_task)
-        else:
-            file_chooser.destroy()
-    
-    def create_backup(self, path):
-        """Crea un backup de los datos y documentos"""
-        import shutil
-        import time
-        
-        timestamp = time.strftime("%d-%m-%Y")
-        backup_filename = f"Backup-Dexter-Organizer-{timestamp}.zip"
-        backup_path = os.path.join(path, backup_filename)
-        
-        try:
-            import zipfile
-            with zipfile.ZipFile(backup_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                # Añadir archivo data.json
-                zipf.write(self.data_file, os.path.basename(self.data_file))
-                
-                # Añadir documentos
-                for category_name, docs in self.categories.items():
-                    for doc_id in docs:
-                        doc_path = os.path.join(self.documents_path, doc_id)
-                        if os.path.exists(doc_path):
-                            zipf.write(doc_path, os.path.join('documents', doc_id))
-            
-            return backup_path
-        except Exception as e:
-            print(f"Error al crear backup: {e}")
-            return None
-    
-    def restore_backup(self, backup_path):
-        """Restaura un backup de los datos y documentos"""
-        import zipfile
-        
-        try:
-            with zipfile.ZipFile(backup_path, 'r') as zipf:
-                # Extraer en un directorio temporal
-                import tempfile
-                temp_dir = tempfile.mkdtemp()
-                zipf.extractall(temp_dir)
-                
-                # Restaurar data.json
-                data_file_temp = os.path.join(temp_dir, os.path.basename(self.data_file))
-                if os.path.exists(data_file_temp):
-                    with open(data_file_temp, 'r') as f:
-                        data = json.load(f)
-                        self.categories = data.get('categories', {})
-                    
-                    # Copiar a ubicación final
-                    import shutil
-                    shutil.copy2(data_file_temp, self.data_file)
-                
-                # Restaurar documentos
-                docs_dir_temp = os.path.join(temp_dir, 'documents')
-                if os.path.exists(docs_dir_temp):
-                    for doc_id in os.listdir(docs_dir_temp):
-                        doc_path_temp = os.path.join(docs_dir_temp, doc_id)
-                        doc_path_final = os.path.join(self.documents_path, doc_id)
-                        shutil.copy2(doc_path_temp, doc_path_final)
-                
-                # Limpiar
-                shutil.rmtree(temp_dir)
-                
-                # Recargar UI
-                self.load_categories()
-                self.content_panel.set_visible_child_name("welcome")
-                self.current_category = None
-                self.current_document = None
-                
-                return True
-        except Exception as e:
-            print(f"Error al restaurar backup: {e}")
-            return False
+        # Usar el módulo de backup
+        self.backup.show_restore_backup_dialog()
     
     def update_selected_category(self, category_name):
         """Actualiza la visualización de la categoría seleccionada"""
@@ -1353,10 +934,23 @@ class DexterOrganizer(Gtk.Application):
         dialog.destroy()
     
     def show_error_dialog(self, message):
+        """Muestra un diálogo de error"""
         dialog = Gtk.MessageDialog(
             transient_for=self.window,
             flags=0,
             message_type=Gtk.MessageType.ERROR,
+            buttons=Gtk.ButtonsType.OK,
+            text=message
+        )
+        dialog.run()
+        dialog.destroy()
+    
+    def show_info_dialog(self, message):
+        """Muestra un diálogo informativo"""
+        dialog = Gtk.MessageDialog(
+            transient_for=self.window,
+            flags=0,
+            message_type=Gtk.MessageType.INFO,
             buttons=Gtk.ButtonsType.OK,
             text=message
         )
