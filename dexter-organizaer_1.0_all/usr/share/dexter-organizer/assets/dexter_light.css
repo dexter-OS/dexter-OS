@@ -105,30 +105,6 @@ window {
 }
 
 /* Barra de herramientas */
-.toolbar {
-    background-color: #fafafa;
-    padding: 10px;
-    border-bottom: 2px solid transparent;
-    /* Añada el gradiente como una decoración */
-    background-image: linear-gradient(to right, #8432e9, #37e6eb);
-    background-position: 0 100%;
-    background-size: 100% 2px;
-    background-repeat: no-repeat;
-    padding: 4px 4px;
-}
-
-.toolbar-button {
-    background-color: transparent;
-    color: black;
-    border-radius: 6px;
-    padding: 5px;
-    border: none;
-}
-
-.toolbar-button:hover {
-    background-color: rgba(230, 230, 230, 1);
-}
-
 .menu-button {
     background-color: transparent;
     padding: 5px 5px;

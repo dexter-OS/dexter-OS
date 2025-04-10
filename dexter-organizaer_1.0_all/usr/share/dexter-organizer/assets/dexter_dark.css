@@ -7,6 +7,7 @@
 
 window {
     background-color: #16181d;
+    border-bottom-right-radius: 12px;
 }
 
 #main-window {
@@ -20,7 +21,6 @@ window {
 .sidebar {
     background-color: #16181d;
     color: white;
-    padding: 0;
     border-bottom-left-radius: 12px;
 }
 
@@ -125,31 +125,6 @@ window {
     border-bottom-right-radius: 12px;
 }
 
-/* Barra de herramientas */
-.toolbar {
-    background-color: #16181d;
-    padding: 10px;
-    border-bottom: 2px solid transparent;
-    /* Añada el gradiente como una decoración */
-    background-image: linear-gradient(to right, #8432e9, #37e6eb);
-    background-position: 0 100%;
-    background-size: 100% 2px;
-    background-repeat: no-repeat;
-    padding: 4px 4px;
-}
-
-.toolbar-button {
-    background-color: transparent;
-    color: white;
-    border-radius: 6px;
-    padding: 5px;
-    border: none;
-}
-
-.toolbar-button:hover {
-    background-color: rgba(37, 41, 50, 1);
-}
-
 .menu-button {
     background-color: transparent;
     color: white;
@@ -163,28 +138,26 @@ window {
 
 /* Barra de herramientas de documento */
 .doc-toolbar {
-    background-color: #34495e;
-    border-bottom: 1px solid #d4d4d4;
-    padding: 8px 15px;
+    background-color: #16181d;
+    padding: 5px 5px;
+    border-bottom: 2px solid transparent;
+    /* Añada el gradiente como una decoración */
+    background-image: linear-gradient(to right, #8432e9, #37e6eb);
+    background-position: 0 100%;
+    background-size: 100% 2px;
+    background-repeat: no-repeat;
 }
 
 .view-mode-button,
 .save-button {
-    border-radius: 6px;
-    padding: 5px 10px;
-    background-color: #3498db;
-    color: white;
-    border: none;
+    background-color: rgba(37, 41, 50, 1);
+    border-left: 3px solid #00b8d4;
+    background-image: linear-gradient(to right, #115677, alpha(#115677, 0) 30px);
 }
 
 .view-mode-button:hover,
 .save-button:hover {
     background-color: #2980b9;
-}
-
-.view-mode-button:active,
-.save-button:active {
-    background-color: #1c6ea4;
 }
 
 /* Vista de documento */
@@ -194,7 +167,7 @@ window {
 }
 
 .document-text-view text {
-    background-color: white;
+    background-color: #23262e;
 }
 
 /* Grid de documentos */
