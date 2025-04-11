@@ -1,240 +1,281 @@
 #!/usr/bin/env python3
-
-"""
-Dexter Organizer - Módulo de edición de documentos
-Author: Victor Oubiña Faubel - oubinav78@gmail.com
-Website: https://sourceforge.net/projects/dexter-gnome/
-"""
-
-import os
 import gi
-gi.require_version('Gtk', '3.0')
-gi.require_version('WebKit2', '4.0')
-from gi.repository import Gtk, WebKit2
+import os
+import json
+import datetime
+gi.require_version('Gtk', '4.0')
+from gi.repository import Gtk, GLib, Gdk, Pango
 
-class DexterEditor:
-    def __init__(self, app):
-        """
-        Inicializa el editor de documentos.
+class Editor:
+    def __init__(self, parent_window, document=None, on_save_callback=None):
+        self.parent = parent_window
+        self.document = document
+        self.on_save_callback = on_save_callback
+        self.data_path = os.path.expanduser("~/.local/share/dexter-organizer")
+        self.categories_file = os.path.join(self.data_path, "categories.json")
         
-        Args:
-            app: Instancia principal de la aplicación DexterOrganizer
-        """
-        self.app = app
+        # Contenedor principal
+        self.container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        self.container.set_margin_top(20)
+        self.container.set_margin_bottom(20)
+        self.container.set_margin_start(20)
+        self.container.set_margin_end(20)
         
-        # Referencia a los widgets principales
-        self.window = app.window
-        self.content_panel = app.content_panel
-        self.documents_path = app.file_manager.documents_path
+        # Título
+        if document:
+            title = Gtk.Label(label=f"<b>Editando: {document['name']}{document['extension']}</b>")
+        else:
+            title = Gtk.Label(label="<b>Nuevo Documento</b>")
+        title.set_use_markup(True)
+        title.set_halign(Gtk.Align.START)
+        self.container.append(title)
         
-        # Crear Stack para manejar diferentes vistas del documento
-        self.document_view_stack = Gtk.Stack()
-        self.document_view_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+        # Información del documento
+        if document:
+            # Buscar el nombre de la categoría
+            category_name = "Sin categoría"
+            try:
+                with open(self.categories_file, 'r') as f:
+                    categories = json.load(f)
+                    for category in categories:
+                        if category["id"] == document["category_id"]:
+                            category_name = category["name"]
+                            break
+            except (FileNotFoundError, json.JSONDecodeError):
+                pass
+                
+            info = Gtk.Label(label=f"<i>Categoría: {category_name} | Última modificación: {document.get('date_modified', 'Desconocida')}</i>")
+            info.set_use_markup(True)
+            info.set_halign(Gtk.Align.START)
+            self.container.append(info)
         
-        # Vista de texto
+        # Editor de texto
+        scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.set_vexpand(True)
+        
         self.text_view = Gtk.TextView()
         self.text_view.set_wrap_mode(Gtk.WrapMode.WORD)
-        self.text_view.get_style_context().add_class("document-text-view")
-        self.text_buffer = self.text_view.get_buffer()
         
-        text_scroll = Gtk.ScrolledWindow()
-        text_scroll.add(self.text_view)
+        # Configurar fuente monoespaciada para código
+        font_desc = Pango.FontDescription("Monospace 10")
+        self.text_view.override_font(font_desc)
         
-        # Vista web para HTML
-        self.web_view = WebKit2.WebView()
-        web_scroll = Gtk.ScrolledWindow()
-        web_scroll.add(self.web_view)
+        # Establecer el contenido si existe
+        if document:
+            buffer = self.text_view.get_buffer()
+            buffer.set_text(document["content"])
         
-        self.document_view_stack.add_named(text_scroll, "text")
-        self.document_view_stack.add_named(web_scroll, "web")
+        scrolled_window.set_child(self.text_view)
+        self.container.append(scrolled_window)
         
-        # Contenedor para los documentos con barra de herramientas
-        self.document_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        # Botones de acción
+        action_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        action_box.set_halign(Gtk.Align.END)
+        action_box.set_margin_top(10)
         
-        # Barra de herramientas de documento
-        self.doc_toolbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.doc_toolbar.get_style_context().add_class("doc-toolbar")
+        cancel_button = Gtk.Button(label="Cancelar")
+        cancel_button.connect("clicked", self.on_cancel)
         
-        self.view_mode_button = Gtk.Button(label="Vista Web")
-        self.view_mode_button.connect("clicked", self.toggle_view_mode)
-        self.view_mode_button.set_sensitive(False)
-        self.view_mode_button.get_style_context().add_class("view-mode-button")
+        save_button = Gtk.Button(label="Guardar")
+        save_button.connect("clicked", self.on_save)
+        save_button.add_css_class("suggested-action")
         
-        self.save_button = Gtk.Button(label="Guardar")
-        self.save_button.connect("clicked", self.on_save_document)
-        self.save_button.get_style_context().add_class("save-button")
+        action_box.append(cancel_button)
+        action_box.append(save_button)
         
-        self.doc_toolbar.pack_start(self.view_mode_button, False, False, 0)
-        self.doc_toolbar.pack_end(self.save_button, False, False, 0)
+        self.container.append(action_box)
         
-        self.document_container.pack_start(self.doc_toolbar, False, False, 0)
-        self.document_container.pack_start(self.document_view_stack, True, True, 0)
+        # Configuración de atajos de teclado
+        self.setup_shortcuts()
         
-        # Estado inicial
-        self.save_button.set_visible(False)
-        self.doc_toolbar.set_visible(False)
-        self.edit_mode = False
-
-    def toggle_view_mode(self, button):
-        """Alterna entre la vista de texto y web para documentos HTML"""
-        current_mode = self.document_view_stack.get_visible_child_name()
+    def get_container(self):
+        return self.container
         
-        if current_mode == "text":
-            self.document_view_stack.set_visible_child_name("web")
-            button.set_label("Vista Código")
-        else:
-            self.document_view_stack.set_visible_child_name("text")
-            button.set_label("Vista Web")
-    
-    def show_document(self, category_name, doc_id):
-        """
-        Muestra un documento en el área principal
+    def setup_shortcuts(self):
+        # Crear acciones para los atajos de teclado
+        action = Gio.SimpleAction.new("save", None)
+        action.connect("activate", self.on_save)
+        self.parent.add_action(action)
         
-        Args:
-            category_name: Nombre de la categoría
-            doc_id: ID del documento
-        """
-        print(f"Editor: Mostrando documento {category_name}/{doc_id}")
+        # Ctrl+S para guardar
+        self.parent.set_accels_for_action("win.save", ["<Control>s"])
         
-        # Obtener información del documento
-        doc_info = self.app.categories[category_name][doc_id]
-        doc_path = os.path.join(self.documents_path, doc_id)
+    def on_cancel(self, button):
+        # Mostrar diálogo de confirmación si hay cambios
+        buffer = self.text_view.get_buffer()
+        start, end = buffer.get_bounds()
+        current_content = buffer.get_text(start, end, False)
         
-        # Leer el contenido del documento
-        try:
-            with open(doc_path, 'r') as f:
-                content = f.read()
-            print(f"Contenido del documento cargado: {len(content)} caracteres")
-        except Exception as e:
-            print(f"Error al leer el documento: {e}")
-            content = ""
-        
-        # Configurar el área de texto con el contenido
-        self.text_buffer.set_text(content)
-        self.text_view.set_editable(False)
-    
-        # Configurar el botón de modo de vista para HTML
-        is_html = doc_info['type'] == 'html'
-        self.view_mode_button.set_sensitive(is_html)
-    
-        # Mostrar en modo texto por defecto
-        self.document_view_stack.set_visible_child_name("text")
-    
-        # Si es HTML, también cargar en webview
-        if is_html:
-            self.web_view.load_html(content, None)
-        
-        # Desactivar modo edición
-        self.edit_mode = False
-    
-        # Mostrar la barra de herramientas del documento
-        self.doc_toolbar.set_visible(True)
-    
-        # Botón guardar no visible en modo lectura
-        self.save_button.set_visible(False)
-        
-        # Añadir y mostrar el contenedor de documento
-        if self.content_panel.get_child_by_name("document_view"):
-            # Necesitamos remover y volver a añadir para forzar la actualización
-            self.content_panel.remove(self.content_panel.get_child_by_name("document_view"))
-    
-        self.content_panel.add_named(self.document_container, "document_view")
-        self.content_panel.set_visible_child_name("document_view")
-    
-        # Forzar actualización de la interfaz
-        self.document_container.show_all()
-        self.content_panel.show_all()
-        
-        # Procesamiento de eventos pendientes para asegurar que la interfaz se actualiza
-        i = 0
-        while Gtk.events_pending() and i < 10:
-            Gtk.main_iteration()
-            i += 1
-    
-        # Mantener el botón guardar oculto después de show_all
-        self.save_button.set_visible(False)
-    
-        # Forzar actualización final
-        self.window.queue_draw()
-    
-        print("Documento mostrado en el contenedor")
-        return True
-    
-    def enable_edit_mode(self):
-        """Activa el modo de edición para el documento actual"""
-        if not self.app.current_document or not self.app.current_category:
-            print("No hay documento seleccionado para editar")
-            return False
+        if self.document and current_content != self.document["content"]:
+            dialog = Gtk.Dialog(title="Confirmar Cancelar", 
+                               transient_for=self.parent,
+                               modal=True)
             
-        print(f"Activando modo edición para: {self.app.current_category}/{self.app.current_document}")
+            dialog.add_button("Descartar Cambios", Gtk.ResponseType.OK)
+            dialog.add_button("Continuar Editando", Gtk.ResponseType.CANCEL)
+            
+            content_area = dialog.get_content_area()
+            content_area.set_margin_top(10)
+            content_area.set_margin_bottom(10)
+            content_area.set_margin_start(10)
+            content_area.set_margin_end(10)
+            
+            label = Gtk.Label(label="Hay cambios sin guardar. ¿Estás seguro de que deseas descartarlos?")
+            content_area.append(label)
+            
+            dialog.set_default_response(Gtk.ResponseType.CANCEL)
+            dialog.show()
+            
+            response = dialog.run()
+            dialog.destroy()
+            
+            if response != Gtk.ResponseType.OK:
+                return
         
-        # Asegurarse de que estamos viendo el documento correcto
-        if self.content_panel.get_visible_child_name() != "document_view":
-            self.show_document(self.app.current_category, self.app.current_document)
+        # Volver a la vista de documentos
+        if self.on_save_callback:
+            self.on_save_callback(None)
         
-            # Procesar eventos pendientes después de mostrar el documento
-            while Gtk.events_pending():
-                Gtk.main_iteration()
+    def on_save(self, *args):
+        buffer = self.text_view.get_buffer()
+        start, end = buffer.get_bounds()
+        content = buffer.get_text(start, end, False)
         
-        # Activar modo edición
-        self.edit_mode = True
-        self.text_view.set_editable(True)
-    
-        # Asegurarse de que estamos en modo texto (no web)
-        self.document_view_stack.set_visible_child_name("text")
+        if not content.strip():
+            dialog = Gtk.MessageDialog(
+                transient_for=self.parent,
+                message_type=Gtk.MessageType.ERROR,
+                buttons=Gtk.ButtonsType.OK,
+                text="El documento está vacío"
+            )
+            dialog.format_secondary_text("Por favor, añade algún contenido antes de guardar.")
+            dialog.run()
+            dialog.destroy()
+            return
         
-        # Mostrar botón guardar
-        self.save_button.set_visible(True)
-        self.save_button.set_sensitive(True)
+        # Si es un documento existente, actualizarlo
+        if self.document:
+            self.document["content"] = content
+            self.document["date_modified"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            if self.on_save_callback:
+                self.on_save_callback(self.document)
+        # Si es un documento nuevo, mostrar diálogo para nombre y categoría
+        else:
+            self.show_new_document_dialog(content)
     
-        # Forzar actualización de la interfaz
-        self.window.show_all()
-    
-        # Mantener el botón guardar visible después de show_all
-        self.save_button.set_visible(True)
-    
-        # Dar foco al área de texto
-        self.text_view.grab_focus()
-    
-        # Procesar eventos pendientes finales
-        while Gtk.events_pending():
-            Gtk.main_iteration()
-    
-        return True
-    
-    def on_save_document(self, button):
-        """Guarda el documento actual"""
-        if not self.app.current_document or not self.app.current_category:
+    def show_new_document_dialog(self, content):
+        # Verificar si hay categorías
+        try:
+            with open(self.categories_file, 'r') as f:
+                categories = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            categories = []
+            
+        if not categories:
+            dialog = Gtk.MessageDialog(
+                transient_for=self.parent,
+                message_type=Gtk.MessageType.INFO,
+                buttons=Gtk.ButtonsType.OK,
+                text="No hay categorías disponibles"
+            )
+            dialog.format_secondary_text("Debes crear al menos una categoría antes de guardar documentos.")
+            dialog.run()
+            dialog.destroy()
             return
             
-        print(f"Guardando documento: {self.app.current_category}/{self.app.current_document}")
+        dialog = Gtk.Dialog(title="Guardar Documento", 
+                           transient_for=self.parent,
+                           modal=True)
         
-        # Obtener contenido actualizado
-        start, end = self.text_buffer.get_bounds()
-        content = self.text_buffer.get_text(start, end, True)
+        dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Guardar", Gtk.ResponseType.OK)
         
-        # Guardar contenido
-        doc_path = os.path.join(self.documents_path, self.app.current_document)
-        try:
-            with open(doc_path, 'w') as f:
-                f.write(content)
-            print(f"Documento guardado: {len(content)} caracteres")
+        content_area = dialog.get_content_area()
+        content_area.set_margin_top(10)
+        content_area.set_margin_bottom(10)
+        content_area.set_margin_start(10)
+        content_area.set_margin_end(10)
+        content_area.set_spacing(10)
+        
+        # Nombre del documento
+        name_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        name_label = Gtk.Label(label="Nombre:")
+        name_label.set_width_chars(10)
+        name_entry = Gtk.Entry()
+        name_entry.set_hexpand(True)
+        name_box.append(name_label)
+        name_box.append(name_entry)
+        content_area.append(name_box)
+        
+        # Extensión del documento
+        ext_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        ext_label = Gtk.Label(label="Extensión:")
+        ext_label.set_width_chars(10)
+        ext_combo = Gtk.ComboBoxText()
+        for ext in [".txt", ".md", ".html", ".py", ".sh"]:
+            ext_combo.append_text(ext)
+        ext_combo.set_active(0)
+        ext_box.append(ext_label)
+        ext_box.append(ext_combo)
+        content_area.append(ext_box)
+        
+        # Categoría
+        cat_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        cat_label = Gtk.Label(label="Categoría:")
+        cat_label.set_width_chars(10)
+        cat_combo = Gtk.ComboBoxText()
+        
+        for category in categories:
+            cat_combo.append_text(category["name"])
+        cat_combo.set_active(0)
+        
+        cat_box.append(cat_label)
+        cat_box.append(cat_combo)
+        content_area.append(cat_box)
+        
+        dialog.set_default_response(Gtk.ResponseType.OK)
+        dialog.show()
+        
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            document_name = name_entry.get_text().strip()
+            document_ext = ext_combo.get_active_text()
+            category_index = cat_combo.get_active()
             
-            # Si es HTML, actualizar la vista web
-            doc_info = self.app.categories[self.app.current_category][self.app.current_document]
-            if doc_info['type'] == 'html':
-                self.web_view.load_html(content, None)
-            
-            # Volver a modo lectura
-            self.edit_mode = False
-            self.text_view.set_editable(False)
-            
-            # Ocultar botón guardar
-            self.save_button.set_visible(False)
-            
-            # Mostrar mensaje de éxito
-            self.app.show_success_dialog("Documento guardado correctamente")
-            
-        except Exception as e:
-            print(f"Error al guardar: {e}")
-            self.app.show_error_dialog(f"Error al guardar: {e}")
+            if document_name and category_index >= 0:
+                category_id = categories[category_index]["id"]
+                
+                # Cargar documentos existentes para obtener un nuevo ID
+                documents_file = os.path.join(self.data_path, "documents.json")
+                try:
+                    with open(documents_file, 'r') as f:
+                        documents = json.load(f)
+                except (FileNotFoundError, json.JSONDecodeError):
+                    documents = []
+                    
+                new_id = 1
+                if documents:
+                    new_id = max(d["id"] for d in documents) + 1
+                    
+                now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                new_document = {
+                    "id": new_id,
+                    "name": document_name,
+                    "extension": document_ext,
+                    "category_id": category_id,
+                    "content": content,
+                    "date_created": now,
+                    "date_modified": now
+                }
+                
+                if self.on_save_callback:
+                    self.on_save_callback(new_document)
+                
+        dialog.destroy()
+        
+    def get_content(self):
+        buffer = self.text_view.get_buffer()
+        start, end = buffer.get_bounds()
+        return buffer.get_text(start, end, False)
