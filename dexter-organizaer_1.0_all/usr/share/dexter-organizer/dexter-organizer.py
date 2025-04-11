@@ -1,965 +1,571 @@
 #!/usr/bin/env python3
-
-"""
-Dexter Organizer - Aplicación para organización de documentos
-Author: Victor Oubiña Faubel - oubinav78@gmail.com
-Website: https://sourceforge.net/projects/dexter-gnome/
-"""
-
-import os
-import sys
 import gi
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk, GLib, Gio, Pango
+import os
+import json
+import sys
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+from gi.repository import Gtk, Gdk, Gio, GLib, Adw
 
-# Importar módulos propios
-from modules.dexter_editor import DexterEditor
-from modules.dexter_file_manager import DexterFileManager
-from modules.dexter_backup import DexterBackup
+# Importar módulos
+from modules.dexter_category import CategoryManager
+from modules.dexter_documents import DocumentManager
+from modules.dexter_editor import Editor
+from modules.dexter_config import ConfigManager
+from modules.dexter_backup import BackupManager
+from modules.dexter_about import AboutManager
+from modules.dexter_file_manager import FileManager
 
-class DexterOrganizer(Gtk.Application):
-    def __init__(self):
-        Gtk.Application.__init__(self, application_id="com.dexter.organizer",
-                                 flags=Gio.ApplicationFlags.FLAGS_NONE)
-        self.connect("activate", self.on_activate)
-        self.window = None
-        self.current_category = None
-        self.current_document = None
-        self.dark_theme = True
+class DexterOrganizer(Gtk.ApplicationWindow):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         
-        # Inicializar el gestor de archivos
-        self.file_manager = DexterFileManager(self)
-        self.categories = self.file_manager.categories
-
-    def on_activate(self, app):
-        # Verificar si ya hay una instancia en ejecución
-        if not self.window:
-            self.load_css_theme()
-            
-            # Crear ventana principal
-            self.window = Gtk.ApplicationWindow(application=app)
-   
-            # Crear un HeaderBar
-            headerbar = Gtk.HeaderBar()
-            headerbar.set_show_close_button(True)
-            headerbar.set_title("Dexter Organizer")
-            self.window.set_titlebar(headerbar)
-
-            self.window.set_default_size(950, 700)
-            self.window.set_position(Gtk.WindowPosition.CENTER)
-            self.window.set_name("main-window")
-            
-            # Selector de tema
-            theme_switch = Gtk.Switch()
-            theme_switch.set_active(self.dark_theme)
-            theme_switch.connect("notify::active", self.on_theme_switch_activated)
-
-            # Iconos para el selector de tema
-            moon_icon = Gtk.Image.new_from_icon_name("weather-clear-night-symbolic", Gtk.IconSize.SMALL_TOOLBAR)
-            sun_icon = Gtk.Image.new_from_icon_name("weather-clear-symbolic", Gtk.IconSize.SMALL_TOOLBAR)
-
-            switch_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
-            switch_box.pack_start(moon_icon, False, False, 0)
-            switch_box.pack_start(theme_switch, False, False, 0)
-            switch_box.pack_start(sun_icon, False, False, 0)
-
-            # Crear layout principal
-            main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-            self.window.add(main_box)
-            
-            # Panel lateral
-            sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            sidebar.set_size_request(180, -1)
-            sidebar.get_style_context().add_class("sidebar")
-            
-            # Logo/Título
-            sidebar_header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            sidebar_header.get_style_context().add_class("sidebar-header")
-            
-            title_label = Gtk.Label(label="DexterOrganizer")
-            title_label.get_style_context().add_class("app-title")
-            subtitle_label = Gtk.Label(label="Mantenimiento del Sistema")
-            subtitle_label.get_style_context().add_class("app-subtitle")
-            
-            # Crear una fila de botones de acción
-            action_buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-            action_buttons_box.set_halign(Gtk.Align.CENTER)
-            action_buttons_box.set_spacing(5)
-            
-            # Botón Añadir
-            add_button = Gtk.Button()
-            add_button.set_image(Gtk.Image.new_from_icon_name("list-add", Gtk.IconSize.BUTTON))
-            add_button.connect("clicked", self.on_add_clicked)
-            add_button.get_style_context().add_class("sidebar-action-button")
-            
-            # Botón Editar
-            edit_button = Gtk.Button()
-            edit_button.set_image(Gtk.Image.new_from_icon_name("document-edit", Gtk.IconSize.BUTTON))
-            edit_button.connect("clicked", self.on_edit_clicked)
-            edit_button.get_style_context().add_class("sidebar-action-button")
-            
-            # Botón Eliminar
-            delete_button = Gtk.Button()
-            delete_button.set_image(Gtk.Image.new_from_icon_name("edit-delete", Gtk.IconSize.BUTTON))
-            delete_button.connect("clicked", self.on_delete_clicked)
-            delete_button.get_style_context().add_class("sidebar-action-button")
-            
-            # Añadir botones al contenedor
-            action_buttons_box.pack_start(add_button, False, False, 0)
-            action_buttons_box.pack_start(edit_button, False, False, 0)
-            action_buttons_box.pack_start(delete_button, False, False, 0)
-            
-            # Añadir elementos al sidebar_header en el orden correcto
-            sidebar_header.pack_start(title_label, False, False, 0)
-            sidebar_header.pack_start(subtitle_label, False, False, 0)
-            
-            # Añadir sidebar_header al sidebar
-            sidebar.pack_start(sidebar_header, False, False, 0)
-            sidebar.pack_start(action_buttons_box, False, False, 0)
-          
-            # Contenedor de categorías (scrollable)
-            categories_scroll = Gtk.ScrolledWindow()
-            categories_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-            
-            self.categories_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            self.categories_box.get_style_context().add_class("categories-box")
-            
-            categories_scroll.add(self.categories_box)
-            sidebar.pack_start(categories_scroll, True, True, 0)
-            
-            # Panel principal
-            main_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            main_panel.get_style_context().add_class("main-panel")
-            
-            # Barra de herramientas
-            toolbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-            toolbar.get_style_context().add_class("toolbar")
-
-            # Botón de menú
-            menu_button = Gtk.Button()
-            menu_button.set_image(Gtk.Image.new_from_icon_name("open-menu", Gtk.IconSize.BUTTON))
-            menu_button.get_style_context().add_class("menu-button")
-
-            # Crear menú popover
-            self.popover = Gtk.Popover()
-            self.popover.set_relative_to(menu_button)
-
-            popover_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            popover_box.set_margin_top(10)
-            popover_box.set_margin_bottom(10)
-            popover_box.set_margin_start(10)
-            popover_box.set_margin_end(10)
-            popover_box.set_spacing(10)
-
-            config_button = Gtk.ModelButton()
-            config_button.set_label("Configuración")
-            config_button.connect("clicked", self.on_config_clicked)
-
-            about_button = Gtk.ModelButton()
-            about_button.set_label("Acerca de Dexter Organizer")
-            about_button.connect("clicked", self.on_about_clicked)
-
-            popover_box.pack_start(config_button, False, False, 0)
-            popover_box.pack_start(about_button, False, False, 0)
-
-            self.popover.add(popover_box)
-            menu_button.connect("clicked", self.on_menu_clicked)
-
-            # Añadir botones al header
-            headerbar.pack_end(menu_button)
-            headerbar.pack_end(switch_box)
-            
-            # Panel de contenido
-            self.content_panel = Gtk.Stack()
-            self.content_panel.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
-            self.content_panel.set_transition_duration(200)
-            
-            # Página de bienvenida
-            welcome_page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            welcome_page.set_halign(Gtk.Align.CENTER)
-            welcome_page.set_valign(Gtk.Align.CENTER)
-            
-            welcome_label = Gtk.Label()
-            welcome_label.set_markup("<span size='xx-large'>Bienvenido a Dexter Organizer</span>")
-            welcome_label.set_margin_bottom(20)
-            
-            info_label = Gtk.Label(label="Utilice el botón Añadir para crear nuevas categorías y documentos.")
-            
-            welcome_page.pack_start(welcome_label, False, False, 0)
-            welcome_page.pack_start(info_label, False, False, 0)
-            
-            self.content_panel.add_named(welcome_page, "welcome")
-            
-            # Página de Configuración
-            config_page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            config_page.set_margin_top(20)
-            config_page.set_margin_bottom(20)
-            config_page.set_margin_start(20)
-            config_page.set_margin_end(20)
-
-            config_title = Gtk.Label()
-            config_title.set_markup("<span size='xx-large'>Configuración de Dexter Organizer</span>")
-            config_title.set_halign(Gtk.Align.START)
-            config_title.set_margin_bottom(20)
-
-            # Notebook para pestañas
-            config_notebook = Gtk.Notebook()
-
-            # Pestaña de Backup
-            backup_page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            backup_page.set_spacing(15)
-            backup_page.set_margin_top(15)
-            backup_page.set_margin_bottom(15)
-            backup_page.set_margin_start(15)
-            backup_page.set_margin_end(15)
-
-            backup_label = Gtk.Label()
-            backup_label.set_markup("<span size='large'>Copia de seguridad</span>")
-            backup_label.set_halign(Gtk.Align.START)
-            backup_label.set_margin_bottom(10)
-
-            backup_info = Gtk.Label(
-                label="Puede crear una copia de seguridad de sus categorías y documentos, "
-                     "o restaurar una copia previamente realizada."
-            )
-            backup_info.set_line_wrap(True)
-            backup_info.set_halign(Gtk.Align.START)
-            backup_info.set_margin_bottom(20)
-
-            # Botones de backup y restore
-            backup_button = Gtk.Button(label="Crear copia de seguridad")
-            backup_button.set_margin_bottom(10)
-            backup_button.connect("clicked", self.on_create_backup_clicked)
-
-            restore_button = Gtk.Button(label="Restaurar copia de seguridad")
-            restore_button.connect("clicked", self.on_restore_backup_clicked)
-
-            backup_page.pack_start(backup_label, False, False, 0)
-            backup_page.pack_start(backup_info, False, False, 0)
-            backup_page.pack_start(backup_button, False, False, 0)
-            backup_page.pack_start(restore_button, False, False, 0)
-
-            # Añadir pestaña
-            config_notebook.append_page(backup_page, Gtk.Label(label="Copias de seguridad"))
-
-            config_page.pack_start(config_title, False, False, 0)
-            config_page.pack_start(config_notebook, True, True, 0)
-            
-            # Botón para volver a la pantalla principal
-            back_button_config = Gtk.Button(label="Volver")
-            back_button_config.connect("clicked", lambda w: self.content_panel.set_visible_child_name("welcome"))
-            back_button_config.set_halign(Gtk.Align.END)
-            back_button_config.set_margin_top(5)
-            config_page.pack_start(back_button_config, False, False, 0)
-
-            # Página Acerca de
-            about_page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            about_page.set_margin_top(20)
-            about_page.set_margin_bottom(20)
-            about_page.set_margin_start(20)
-            about_page.set_margin_end(20)
-
-            about_title = Gtk.Label()
-            about_title.set_markup("<span size='xx-large'>Acerca de Dexter Organizer</span>")
-            about_title.set_halign(Gtk.Align.START)
-            about_title.set_margin_bottom(20)
-
-            # Información sobre la aplicación
-            about_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            about_box.set_spacing(10)
-            about_box.set_halign(Gtk.Align.CENTER)
-            about_box.set_valign(Gtk.Align.CENTER)
-
-            # Logo
+        # Configuración básica de la ventana
+        self.set_default_size(950, 700)
+        
+        # Asegurar instancia única
+        self.app = kwargs.get('application')
+        
+        # Cargar configuración
+        self.data_path = os.path.expanduser("~/.local/share/dexter-organizer")
+        os.makedirs(self.data_path, exist_ok=True)
+        self.config_file = os.path.join(self.data_path, "config.json")
+        self.load_config()
+        
+        # Verificar si document_manager está inicializado correctamente
+        if not hasattr(self, 'document_manager'):
+            self.document_manager = DocumentManager(self)
+        
+        # Verificar si config.json tiene todas las claves necesarias
+        required_keys = {"backup_path", "data_path", "font_family", "font_size", "theme"}
+        if not required_keys.issubset(self.config.keys()):
+            self.config.update({
+                "backup_path": os.path.expanduser("~/Documentos/DexterBackups"),
+                "data_path": self.data_path,
+                "font_family": "Sans",
+                "font_size": 10,
+                "theme": "dark"
+            })
+            with open(self.config_file, 'w') as f:
+                json.dump(self.config, f, indent=4)
+        
+        # Estructura principal
+        self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.set_child(self.main_box)
+        
+        # Contenido principal
+        self.content_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.main_box.append(self.content_box)
+        
+        # Área de contenido principal
+        self.main_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.main_content.set_hexpand(True)
+        self.content_box.append(self.main_content)
+        
+        # Configurar CSS
+        self.css_provider = Gtk.CssProvider()
+        self.apply_theme()
+        
+        # Header Bar
+        self.create_header()
+        
+        # Panel lateral
+        self.create_sidebar()
+        
+        # Inicializar módulos
+        self.current_module = None
+        self.category_manager = CategoryManager(self)
+        self.config_manager = ConfigManager(self)
+        self.backup_manager = BackupManager(self)
+        self.about_manager = AboutManager(self)
+        self.file_manager = FileManager(self)
+        
+        # Mostrar vista de documentos por defecto
+        self.show_documents()
+        
+        # Configurar acciones
+        self.setup_actions()
+        
+    def load_config(self):
+        try:
+            with open(self.config_file, 'r') as f:
+                self.config = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError, KeyError):
+            self.config = {
+                "backup_path": os.path.expanduser("~/Documentos/DexterBackups"),
+                "data_path": self.data_path,
+                "font_family": "Sans",
+                "font_size": 10,
+                "theme": "dark"
+            }
+            with open(self.config_file, 'w') as f:
+                json.dump(self.config, f, indent=4)
+                
+    def apply_theme(self):
+        theme = self.config.get("theme", "dark")
+        css_file = "dexter_dark.css" if theme == "dark" else "dexter_light.css"
+        
+        # Buscar el archivo CSS en varias ubicaciones posibles
+        possible_paths = [
+            # Si se ejecuta directamente desde el directorio del proyecto
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), f'assets/{css_file}'),
+            # Si se ejecuta desde el enlace simbólico en /usr/bin
+            os.path.join('/usr/share/dexter-organizer', f'assets/{css_file}')
+        ]
+        
+        # Obtener el display por defecto
+        display = Gdk.Display.get_default()
+        
+        css_loaded = False
+        for css_path in possible_paths:
             try:
-                logo = Gtk.Image.new_from_icon_name("dexter-organizer", Gtk.IconSize.DIALOG)
-                logo.set_pixel_size(128)
-                about_box.pack_start(logo, False, False, 10)
-            except Exception:
-                pass  # Si no se puede cargar el logo, continuamos sin él
-
-            app_name = Gtk.Label()
-            app_name.set_markup("<span size='x-large'>Dexter Organizer</span>")
-            about_box.pack_start(app_name, False, False, 0)
-
-            version = Gtk.Label(label="Versión 1.0")
-            about_box.pack_start(version, False, False, 0)
-
-            author = Gtk.Label(label="Desarrollado por Víctor Oubiña Faubel")
-            about_box.pack_start(author, False, False, 5)
-
-            email = Gtk.Label()
-            email.set_markup("<a href='mailto:oubinav78@gmail.com'>oubinav78@gmail.com</a>")
-            about_box.pack_start(email, False, False, 0)
-
-            website = Gtk.Label()
-            website.set_markup("<a href='https://sourceforge.net/projects/dexter-gnome/'>Proyecto Dexter</a>")
-            about_box.pack_start(website, False, False, 5)
-
-            description = Gtk.Label(label="Aplicación para organización de documentos")
-            description.set_line_wrap(True)
-            description.set_max_width_chars(60)
-            about_box.pack_start(description, False, False, 10)
-
-            about_page.pack_start(about_title, False, False, 0)
-            about_page.pack_start(about_box, True, True, 0)
-            
-            # Botón para volver a la pantalla principal
-            back_button_about = Gtk.Button(label="Volver")
-            back_button_about.connect("clicked", lambda w: self.content_panel.set_visible_child_name("welcome"))
-            back_button_about.set_halign(Gtk.Align.END)
-            back_button_about.set_margin_top(5)
-            about_page.pack_start(back_button_about, False, False, 0)
-
-            # Añadir las páginas al panel de contenido
-            self.content_panel.add_named(config_page, "config")
-            self.content_panel.add_named(about_page, "about")
-            
-            # Inicializar el editor de documentos
-            self.editor = DexterEditor(self)
-            
-            # Inicializar el módulo de backup
-            self.backup = DexterBackup(self)
-            
-            # Añadir al panel principal
-            main_panel.pack_start(toolbar, False, False, 0)
-            main_panel.pack_start(self.content_panel, True, True, 0)
-            
-            # Añadir paneles al layout principal
-            main_box.pack_start(sidebar, False, False, 0)
-            main_box.pack_start(main_panel, True, True, 0)
-            
-            # Cargar categorías
-            self.load_categories()
-            
-            # Mostrar todo
-            self.window.show_all()
-
-    def on_theme_switch_activated(self, switch, gparam):
-        self.dark_theme = switch.get_active()
-        self.load_css_theme()
-
-    def load_css_theme(self):
-        css_provider = Gtk.CssProvider()
-        css_file = "dexter_dark.css" if self.dark_theme else "dexter_light.css"
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", css_file)
-        css_provider.load_from_path(path)
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            css_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
-    
-    def load_categories(self):
-        # Limpiar el panel de categorías
-        for child in self.categories_box.get_children():
-            self.categories_box.remove(child)
-        
-        # Añadir las categorías
-        for category_name in sorted(self.categories.keys()):
-            self.add_category_to_sidebar(category_name)
-        
-        # Mostrar todos los widgets
-        self.categories_box.show_all()
-    
-    def add_category_to_sidebar(self, category_name):
-        category_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        category_box.get_style_context().add_class("category-box")
-        
-        # Botón principal de categoría
-        category_button = Gtk.Button()
-        category_button.set_relief(Gtk.ReliefStyle.NONE)
-        category_button.get_style_context().add_class("category-button")
-        
-        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        
-        # Añadir icono de expansión
-        expander_icon = Gtk.Image.new_from_icon_name("pan-end-symbolic", Gtk.IconSize.MENU)
-        button_box.pack_start(expander_icon, False, False, 5)
-        
-        # Etiqueta de categoría
-        label = Gtk.Label(label=category_name)
-        label.set_halign(Gtk.Align.START)
-        label.set_ellipsize(Pango.EllipsizeMode.END)
-        
-        button_box.pack_start(label, True, True, 5)
-        
-        category_button.add(button_box)
-        
-        # Lista de documentos
-        documents_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        documents_box.get_style_context().add_class("documents-box")
-        documents_box.set_margin_start(4)
-        
-        # Añadir documentos
-        for doc_id, doc_info in self.categories[category_name].items():
-            doc_button = Gtk.Button()
-            doc_button.set_relief(Gtk.ReliefStyle.NONE)
-            doc_button.get_style_context().add_class("document-button")
-            
-            doc_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-            
-            # Etiqueta de documento (sin icono)
-            doc_label = Gtk.Label(label=doc_info['name'])
-            doc_label.set_halign(Gtk.Align.START)
-            doc_label.set_ellipsize(Pango.EllipsizeMode.END)
-        
-            doc_box.pack_start(doc_label, True, True, 5)
-            
-            doc_button.add(doc_box)
-            doc_button.connect("clicked", self.on_document_clicked, category_name, doc_id)
-        
-            documents_box.pack_start(doc_button, False, False, 0)
-        
-        # Estado inicial: documentos ocultos, excepto si es la categoría seleccionada
-        is_expanded = (category_name == self.current_category)
-        documents_box.set_visible(is_expanded)
-        
-        # Si está expandida, mostrar icono de expansión adecuado
-        if is_expanded:
-            expander_icon.set_from_icon_name("pan-down-symbolic", Gtk.IconSize.MENU)
-        
-        # Función para manejar la expansión/contracción
-        def on_category_toggled(button):
-            # Cambiar visibilidad de los documentos
-            documents_visible = documents_box.get_visible()
-            documents_box.set_visible(not documents_visible)
-            
-            # Cambiar icono de expansión
-            if documents_visible:
-                expander_icon.set_from_icon_name("pan-end-symbolic", Gtk.IconSize.MENU)
-            else:
-                expander_icon.set_from_icon_name("pan-down-symbolic", Gtk.IconSize.MENU)
-        
-            # Establecer esta categoría como la seleccionada actualmente
-            self.current_category = category_name
-            self.current_document = None
-        
-            # Actualizar la visualización de la categoría seleccionada
-            self.update_selected_category(category_name)
-        
-            # Al expandir/contraer, también navegar a la categoría
-            self.on_category_clicked(None, category_name)
-        
-        # Conectar señal
-        category_button.connect("clicked", on_category_toggled)
-        
-        # Añadir al panel lateral
-        category_box.pack_start(category_button, False, False, 0)
-        category_box.pack_start(documents_box, False, False, 0)
-        
-        self.categories_box.pack_start(category_box, False, False, 0)
-    
-    def on_category_clicked(self, button, category_name):
-        # Establecer la categoría actual y quitar documento actual
-        self.current_category = category_name
-        self.current_document = None
-        
-        # Actualizar la visualización de la categoría seleccionada
-        self.update_selected_category(category_name)
-        
-        # Crear una página para mostrar los documentos de la categoría
-        category_page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        category_page.set_margin_top(20)
-        category_page.set_margin_bottom(20)
-        category_page.set_margin_start(20)
-        category_page.set_margin_end(20)
-        
-        # Título de la categoría
-        title_label = Gtk.Label()
-        title_label.set_markup(f"<span size='xx-large'>{category_name}</span>")
-        title_label.set_halign(Gtk.Align.START)
-        title_label.set_margin_bottom(20)
-        
-        category_page.pack_start(title_label, False, False, 0)
-        
-        # Lista de documentos en formato de grid
-        docs_grid = Gtk.FlowBox()
-        docs_grid.set_valign(Gtk.Align.START)
-        docs_grid.set_max_children_per_line(4)
-        docs_grid.set_selection_mode(Gtk.SelectionMode.NONE)
-        docs_grid.set_column_spacing(20)
-        docs_grid.set_row_spacing(20)
-        
-        for doc_id, doc_info in self.categories[category_name].items():
-            # Crear un botón para cada documento
-            doc_button = Gtk.Button()
-            doc_button.set_relief(Gtk.ReliefStyle.NONE)
-            doc_button.get_style_context().add_class("document-grid-item")
-            
-            doc_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            doc_box.set_spacing(10)
-            
-            doc_label = Gtk.Label(label=doc_info['name'])
-            
-            doc_box.pack_start(doc_label, False, False, 0)
-            
-            doc_button.add(doc_box)
-            doc_button.connect("clicked", self.on_document_clicked, category_name, doc_id)
-            
-            docs_grid.add(doc_button)
-        
-        # Scrollable para la grid
-        scroll = Gtk.ScrolledWindow()
-        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scroll.add(docs_grid)
-        
-        category_page.pack_start(scroll, True, True, 0)
-        
-        # Añadir un datos específicos a la página para identificar que es una página de categoría
-        category_page.set_data("category", category_name)
-        
-        # Añadir y mostrar la página
-        if self.content_panel.get_child_by_name(f"category_{category_name}"):
-            self.content_panel.remove(self.content_panel.get_child_by_name(f"category_{category_name}"))
-    
-        self.content_panel.add_named(category_page, f"category_{category_name}")
-        self.content_panel.set_visible_child_name(f"category_{category_name}")
-    
-        # Asegurar que la categoría sigue seleccionada
-        self.current_category = category_name
-    
-    def on_document_clicked(self, button, category_name, doc_id):
-        print(f"Documento seleccionado: {category_name} - {doc_id}")
-    
-        # Actualizar el estado actual
-        self.current_category = category_name
-        self.current_document = doc_id
-        
-        # Actualizar la visualización de la categoría y documento seleccionados
-        self.update_selected_document(category_name, doc_id)
-        
-        # Forzar procesamiento de eventos inmediatamente
-        while Gtk.events_pending():
-            Gtk.main_iteration()
-        
-        # Mostrar el documento explícitamente
-        print(f"Mostrando documento: {category_name}/{doc_id}")
-        self.content_panel.set_visible_child_name("document_view")
-        result = self.editor.show_document(category_name, doc_id)
-        
-        # Forzar actualización de la interfaz
-        self.window.queue_draw()
-        
-        # Procesar eventos pendientes para asegurar la actualización completa
-        while Gtk.events_pending():
-            Gtk.main_iteration()
-            
-        if not result:
-            self.show_error_dialog(f"Error al abrir el documento: {doc_id}")
-    
-    def on_edit_clicked(self, button):
-        if self.current_document and self.current_category:
-            # Activar el modo edición usando el editor
-            self.editor.enable_edit_mode()
-    
-    def on_add_clicked(self, button):
-        # Diálogo para añadir nuevo documento o categoría
-        dialog = Gtk.Dialog(
-            title="Añadir",
-            parent=self.window,
-            flags=Gtk.DialogFlags.MODAL,
-            buttons=(
-                "Cancelar", Gtk.ResponseType.CANCEL,
-                "Aceptar", Gtk.ResponseType.OK
-            )
-        )
-        dialog.set_default_size(450, 300)
-        dialog.get_style_context().add_class("dialog")
-        
-        content_area = dialog.get_content_area()
-        content_area.set_margin_top(10)
-        content_area.set_margin_bottom(10)
-        content_area.set_margin_start(10)
-        content_area.set_margin_end(10)
-        content_area.set_spacing(10)
-        
-        # Crear un notebook para las pestañas
-        notebook = Gtk.Notebook()
-        notebook.set_tab_pos(Gtk.PositionType.TOP)
-        
-        # Página para añadir categoría
-        category_page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        category_page.set_margin_top(15)
-        category_page.set_margin_bottom(15)
-        category_page.set_margin_start(15)
-        category_page.set_margin_end(15)
-        category_page.set_spacing(15)
-        
-        category_label = Gtk.Label(label="Nombre de la categoría:")
-        category_label.set_halign(Gtk.Align.START)
-    
-        category_entry = Gtk.Entry()
-        category_entry.set_activates_default(True)
-    
-        category_page.pack_start(category_label, False, False, 0)
-        category_page.pack_start(category_entry, False, False, 0)
-        
-        # Página para añadir documento
-        document_page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        document_page.set_margin_top(15)
-        document_page.set_margin_bottom(15)
-        document_page.set_margin_start(15)
-        document_page.set_margin_end(15)
-        document_page.set_spacing(15)
-    
-        doc_name_label = Gtk.Label(label="Nombre del documento:")
-        doc_name_label.set_halign(Gtk.Align.START)
-    
-        doc_name_entry = Gtk.Entry()
-        doc_name_entry.set_activates_default(True)
-        
-        # Selector de categoría
-        category_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        category_box.set_spacing(5)
-    
-        category_selector_label = Gtk.Label(label="Categoría:")
-        category_selector_label.set_halign(Gtk.Align.START)
-        
-        category_combo = Gtk.ComboBoxText()
-        for category in sorted(self.categories.keys()):
-            category_combo.append_text(category)
-    
-        if len(self.categories) > 0:
-            category_combo.set_active(0)
-    
-        new_category_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        new_category_box.set_spacing(10)
-    
-        new_category_label = Gtk.Label(label="Nueva categoría:")
-        new_category_entry = Gtk.Entry()
-    
-        new_category_box.pack_start(new_category_label, False, False, 0)
-        new_category_box.pack_start(new_category_entry, True, True, 0)
-    
-        category_box.pack_start(category_selector_label, False, False, 0)
-        category_box.pack_start(category_combo, False, False, 0)
-        category_box.pack_start(new_category_box, False, False, 0)
-        
-        # Selector de tipo de documento
-        type_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        type_box.set_spacing(5)
-        type_box.set_margin_top(10)
-    
-        type_label = Gtk.Label(label="Tipo de documento:")
-        type_label.set_halign(Gtk.Align.START)
-    
-        type_combo = Gtk.ComboBoxText()
-        type_combo.append_text("Texto (.txt)")
-        type_combo.append_text("Markdown (.md)")
-        type_combo.append_text("HTML (.html)")
-        type_combo.set_active(0)
-    
-        type_box.pack_start(type_label, False, False, 0)
-        type_box.pack_start(type_combo, False, False, 0)
-    
-        # Añadir widgets a la página de documento
-        document_page.pack_start(doc_name_label, False, False, 0)
-        document_page.pack_start(doc_name_entry, False, False, 0)
-        document_page.pack_start(category_box, False, False, 0)
-        document_page.pack_start(type_box, False, False, 0)
-    
-        # Estado inicial - ocultar opción de nueva categoría
-        new_category_box.set_visible(False)
-        
-        # Añadir pestañas al notebook
-        category_tab_label = Gtk.Label(label="Categoría")
-        document_tab_label = Gtk.Label(label="Documento")
-    
-        notebook.append_page(category_page, category_tab_label)
-        notebook.append_page(document_page, document_tab_label)
-    
-        # Añadir notebook al diálogo
-        content_area.pack_start(notebook, True, True, 0)
-    
-        # Conectar señales
-        def on_category_changed(widget):
-            # Mostrar campo de nueva categoría si se selecciona "Nueva categoría"
-            text = category_combo.get_active_text()
-            if text == "Nueva categoría":
-                new_category_box.set_visible(True)
-            else:
-                new_category_box.set_visible(False)
-        
-        # Añadir opción "Nueva categoría" si hay categorías
-        if len(self.categories) > 0:
-            category_combo.append_text("Nueva categoría")
-            category_combo.connect("changed", on_category_changed)
-    
-        dialog.show_all()
-    
-        # Hacer que el botón "Aceptar" sea el predeterminado
-        dialog.set_default_response(Gtk.ResponseType.OK)
-    
-        # Correr el diálogo
-        response = dialog.run()
-    
-        if response == Gtk.ResponseType.OK:
-            # Obtener la pestaña activa
-            current_page = notebook.get_current_page()
-        
-            if current_page == 0:  # Pestaña de Categoría
-                category_name = category_entry.get_text().strip()
-            
-                if category_name:
-                    if category_name not in self.categories:
-                        self.categories[category_name] = {}
-                        self.file_manager.save_data(self.categories)
-                        self.load_categories()
-                    else:
-                        self.show_error_dialog("La categoría ya existe.")
-                else:
-                    self.show_error_dialog("Nombre de categoría vacío.")
-                
-            else:  # Pestaña de Documento
-                doc_name = doc_name_entry.get_text().strip()
-            
-                if doc_name:
-                    doc_type_idx = type_combo.get_active()
-                    doc_type = ["txt", "md", "html"][doc_type_idx]
-                
-                    # Determinar la categoría
-                    if len(self.categories) > 0:
-                        selected_category = category_combo.get_active_text()
+                if os.path.exists(css_path):
+                    print(f"Intentando cargar CSS desde: {css_path}")
+                    self.css_provider.load_from_path(css_path)
                     
-                        if selected_category == "Nueva categoría":
-                            new_cat_name = new_category_entry.get_text().strip()
-                            if new_cat_name:
-                                if new_cat_name not in self.categories:
-                                    self.categories[new_cat_name] = {}
-                                    selected_category = new_cat_name
-                                else:
-                                    self.show_error_dialog("La categoría ya existe.")
-                                    dialog.destroy()
-                                    return
-                            else:
-                                self.show_error_dialog("Nombre de categoría vacío.")
-                                dialog.destroy()
-                                return
-                    else:
-                        # Si no hay categorías, crear una con el nombre "Documentos"
-                        selected_category = "Documentos"
-                        self.categories[selected_category] = {}
-                
-                    # Crear el documento utilizando el FileManager
-                    doc_id = self.file_manager.create_document(selected_category, doc_name, doc_type)
+                    # Asegurar que el proveedor CSS se aplique a toda la aplicación
+                    Gtk.StyleContext.add_provider_for_display(
+                        display,
+                        self.css_provider,
+                        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                    )
+                    print(f"CSS cargado correctamente desde: {css_path}")
                     
-                    if doc_id:
-                        # Actualizar la interfaz
-                        self.load_categories()
-                        
-                        # Abrir el documento creado
-                        self.current_category = selected_category
-                        self.current_document = doc_id
-                        
-                        print(f"Abriendo documento recién creado: {selected_category}/{doc_id}")
-                        
-                        # Mostrar el documento
-                        result = self.editor.show_document(selected_category, doc_id)
-                        
-                        # Procesar eventos pendientes
-                        while Gtk.events_pending():
-                            Gtk.main_iteration()
-                            
-                        # Activar modo edición directamente en el editor
-                        self.editor.enable_edit_mode()
-
-                        # Forzar actualización final
-                        self.window.show_all()
-
-                        # Mantener el botón guardar visible
-                        self.editor.save_button.set_visible(True)
-
-                        print("Documento creado y abierto en modo edición")
-    
-        dialog.destroy()
-    
-    def on_delete_clicked(self, button):
-        if self.current_category:
-            if self.current_document:
-                # Eliminar documento
-                self.delete_document()
-            else:
-                # Eliminar categoría directamente sin verificar la página actual
-                self.delete_category()
+                    # Aplicar clases CSS específicas a componentes
+                    if self.main_box:
+                        self.main_box.add_css_class("main-box")
+                    
+                    # Forzar actualización de la interfaz
+                    self.queue_draw()
+                    
+                    css_loaded = True
+                    break
+            except Exception as e:
+                print(f"Error al cargar CSS desde {css_path}: {e}")
+                
+        if not css_loaded:
+            print("No se pudo cargar ningún archivo CSS. Usando estilo predeterminado.")
+            
+    def create_header(self):
+        header = Gtk.HeaderBar()
+        header.set_show_title_buttons(True)
+        
+        # Búsqueda (ocupando todo el espacio disponible)
+        search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        search_box.set_hexpand(True)
+        
+        # Crear el buscador
+        self.search_entry = Gtk.SearchEntry()
+        self.search_entry.set_hexpand(True)  # Expandir horizontalmente
+        self.search_entry.set_size_request(-1, 30)  # Altura fija para mejor apariencia
+        self.search_entry.set_margin_start(10)
+        self.search_entry.set_margin_end(10)
+        self.search_entry.connect("search-changed", self.on_search_changed)
+        
+        # Añadir el buscador al contenedor
+        search_box.append(self.search_entry)
+        
+        # Hacer que el buscador ocupe todo el espacio disponible
+        header.set_title_widget(search_box)
+        self.set_titlebar(header)
+        
+        # Botón menú (ahora primero en el lado derecho)
+        menu_button = Gtk.MenuButton()
+        menu_button.set_icon_name("open-menu-symbolic")
+        header.pack_end(menu_button)
+        
+        # Botón Toggle tema (ahora segundo en el lado derecho)
+        self.theme_button = Gtk.Button()
+        if self.config.get("theme", "dark") == "dark":
+            self.theme_button.set_icon_name("weather-clear-symbolic")
         else:
-            self.show_info_dialog("Para eliminar, primero seleccione una categoría o documento.")
-
-    def delete_document(self):
-        dialog = Gtk.MessageDialog(
-            transient_for=self.window,
-            flags=0,
-            message_type=Gtk.MessageType.QUESTION,
-            buttons=Gtk.ButtonsType.YES_NO,
-            text=f"¿Está seguro de que desea eliminar el documento {self.categories[self.current_category][self.current_document]['name']}?"
-        )
+            self.theme_button.set_icon_name("weather-clear-night-symbolic")
+        self.theme_button.connect("clicked", self.toggle_theme)
+        header.pack_end(self.theme_button)
         
-        response = dialog.run()
-        dialog.destroy()
+        # Crear el menú usando un modelo simple
+        menu_model = Gio.Menu()
         
-        if response == Gtk.ResponseType.YES:
-            # Eliminar documento usando el FileManager
-            if self.file_manager.delete_document(self.current_category, self.current_document):
-                # Recargar la interfaz
-                self.load_categories()
+        # Añadir elementos al menú
+        config_item = Gio.MenuItem.new("Configuración", None)
+        config_item.set_detailed_action("app.config")
+        menu_model.append_item(config_item)
+        
+        about_item = Gio.MenuItem.new("Acerca de", None)
+        about_item.set_detailed_action("app.about")
+        menu_model.append_item(about_item)
+        
+        # Asignar el modelo al botón de menú
+        menu_button.set_menu_model(menu_model)
+        
+        # Configurar las acciones directamente en la aplicación
+        app = self.get_application()
+        
+        # Acción de configuración
+        config_action = Gio.SimpleAction.new("config", None)
+        config_action.connect("activate", lambda a, p: self.show_config())
+        app.add_action(config_action)
+        
+        # Acción de acerca de
+        about_action = Gio.SimpleAction.new("about", None)
+        about_action.connect("activate", lambda a, p: self.show_about())
+        app.add_action(about_action)
+        
+    def create_sidebar(self):
+        sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        sidebar.set_size_request(200, -1)
+        sidebar.add_css_class("sidebar")
+        
+        # Logo en la parte superior (solo texto)
+        logo_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        logo_box.set_margin_top(15)
+        logo_box.set_margin_bottom(15)
+        logo_box.set_halign(Gtk.Align.CENTER)
+        
+        # Título principal
+        app_name = Gtk.Label(label="<b>DexterOrganizer</b>")
+        app_name.set_use_markup(True)
+        app_name.add_css_class("title")
+        
+        # Subtítulo
+        app_subtitle = Gtk.Label(label="Gestor de Archivos")
+        app_subtitle.set_margin_top(2)
+        app_subtitle.add_css_class("subtitle")
+        
+        logo_box.append(app_name)
+        logo_box.append(app_subtitle)
+        sidebar.append(logo_box)
+        
+        # Separador después del logo
+        separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        separator.set_margin_bottom(10)
+        sidebar.append(separator)
+        
+        # Botones de acción
+        action_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        action_box.set_margin_top(10)
+        action_box.set_margin_bottom(10)
+        action_box.set_margin_start(10)
+        action_box.set_margin_end(10)
+        
+        add_button = Gtk.Button(icon_name="list-add-symbolic")
+        add_button.set_tooltip_text("Añadir Documento")
+        add_button.connect("clicked", self.on_add_document)
+        
+        edit_button = Gtk.Button(icon_name="document-edit-symbolic")
+        edit_button.set_tooltip_text("Editar Documento")
+        edit_button.connect("clicked", self.on_edit_document)
+        
+        delete_button = Gtk.Button(icon_name="user-trash-symbolic")
+        delete_button.set_tooltip_text("Eliminar Documento")
+        delete_button.connect("clicked", self.on_delete_document)
+        
+        action_box.append(add_button)
+        action_box.append(edit_button)
+        action_box.append(delete_button)
+        action_box.set_halign(Gtk.Align.CENTER)
+        sidebar.append(action_box)
+        
+        # Separador después de los botones
+        separator2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        separator2.set_margin_bottom(10)
+        sidebar.append(separator2)
+        
+        # Título de categorías
+        categories_label = Gtk.Label(label="<b>Categorías</b>")
+        categories_label.set_use_markup(True)
+        categories_label.set_halign(Gtk.Align.START)
+        categories_label.set_margin_start(10)
+        categories_label.set_margin_bottom(5)
+        sidebar.append(categories_label)
+        
+        # Lista de categorías
+        self.categories_box = Gtk.ListBox()
+        self.categories_box.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.categories_box.add_css_class("categories-list")
+        self.categories_box.connect("row-selected", self.on_category_selected)
+        
+        # Añadir "Todos los documentos"
+        row = Gtk.ListBoxRow()
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        box.set_margin_top(5)
+        box.set_margin_bottom(5)
+        box.set_margin_start(5)
+        box.set_margin_end(5)
+        
+        icon = Gtk.Image.new_from_icon_name("folder-symbolic")
+        label = Gtk.Label(label="Todos los Documentos")
+        label.set_hexpand(True)
+        label.set_halign(Gtk.Align.START)
+        
+        box.append(icon)
+        box.append(label)
+        row.set_child(box)
+        # Usar un atributo en lugar de set_data
+        row.category_id = 0
+        
+        self.categories_box.append(row)
+        
+        # Cargar categorías desde el archivo
+        categories_file = os.path.join(self.data_path, "categories.json")
+        try:
+            with open(categories_file, 'r') as f:
+                categories = json.load(f)
                 
-                # Mostrar la vista de categoría
-                self.on_category_clicked(None, self.current_category)
-                self.current_document = None
-            else:
-                self.show_error_dialog("Error al eliminar el documento.")
-    
-    def delete_category(self):
-        dialog = Gtk.MessageDialog(
-            transient_for=self.window,
-            flags=0,
-            message_type=Gtk.MessageType.QUESTION,
-            buttons=Gtk.ButtonsType.YES_NO,
-            text=f"¿Está seguro de que desea eliminar la categoría {self.current_category} y todos sus documentos?"
-        )
-        
-        response = dialog.run()
-        dialog.destroy()
-        
-        if response == Gtk.ResponseType.YES:
-            # Eliminar categoría usando el FileManager
-            if self.file_manager.delete_category(self.current_category):
-                # Recargar la interfaz
-                self.load_categories()
+            for category in categories:
+                row = Gtk.ListBoxRow()
+                box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+                box.set_margin_top(5)
+                box.set_margin_bottom(5)
+                box.set_margin_start(5)
+                box.set_margin_end(5)
                 
-                # Mostrar pantalla de bienvenida
-                self.content_panel.set_visible_child_name("welcome")
-                self.current_category = None
-                self.current_document = None
-            else:
-                self.show_error_dialog("Error al eliminar la categoría.")
-    
-    def on_menu_clicked(self, button):
-        # Asegurarse de que el popover esté visible y se muestre correctamente
-        self.popover.show_all()
-        self.popover.popup()
-    
-    def on_config_clicked(self, button):
-        self.popover.popdown()
-        self.content_panel.set_visible_child_name("config")
-    
-    def on_about_clicked(self, button):
-        self.popover.popdown()
-        self.content_panel.set_visible_child_name("about")
-    
-    def on_create_backup_clicked(self, button):
-        # Usar el módulo de backup
-        self.backup.show_create_backup_dialog()
-
-    def on_restore_backup_clicked(self, button):
-        # Usar el módulo de backup
-        self.backup.show_restore_backup_dialog()
-    
-    def update_selected_category(self, category_name):
-        """Actualiza la visualización de la categoría seleccionada"""
-        # Recorrer todas las categorías y quitar la clase 'selected'
-        for category_box in self.categories_box.get_children():
-            # El primer hijo de category_box debería ser el botón de categoría
-            for child in category_box.get_children():
-                if isinstance(child, Gtk.Button):
-                    child.get_style_context().remove_class("selected")
-                    # También eliminar selección de todos los documentos
-                    if len(category_box.get_children()) > 1:
-                        docs_box = category_box.get_children()[1]
-                        for doc_button in docs_box.get_children():
-                            doc_button.get_style_context().remove_class("selected")
+                icon = Gtk.Image.new_from_icon_name("folder-symbolic")
+                label = Gtk.Label(label=category["name"])
+                label.set_hexpand(True)
+                label.set_halign(Gtk.Align.START)
+                
+                box.append(icon)
+                box.append(label)
+                row.set_child(box)
+                # Usar un atributo en lugar de set_data
+                row.category_id = category["id"]
+                
+                self.categories_box.append(row)
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+            
+        # Seleccionar "Todos los documentos" por defecto
+        self.categories_box.select_row(self.categories_box.get_row_at_index(0))
         
-        # Ahora marcar la categoría seleccionada
-        for category_box in self.categories_box.get_children():
-            for child in category_box.get_children():
-                if isinstance(child, Gtk.Button):
-                    # Verificar si esta es la categoría que queremos marcar
-                    label_widget = None
-                    for button_child in child.get_children():
-                        if isinstance(button_child, Gtk.Box):
-                            for box_child in button_child.get_children():
-                                if isinstance(box_child, Gtk.Label) and box_child.get_text() == category_name:
-                                    label_widget = box_child
-                                    break
-                    
-                    if label_widget:
-                        child.get_style_context().add_class("selected")
+        # Scrolled Window para categorías
+        categories_scroll = Gtk.ScrolledWindow()
+        categories_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        categories_scroll.set_vexpand(True)
+        categories_scroll.set_child(self.categories_box)
+        sidebar.append(categories_scroll)
+        
+        # Añadir sidebar al contenedor principal
+        self.content_box.prepend(sidebar)
+        
+    def setup_actions(self):
+        # Eliminar acciones existentes si las hay
+        for action_name in ["config", "about"]:
+            if self.lookup_action(action_name):
+                self.remove_action(action_name)
+                print(f"Acción {action_name} eliminada")
+        
+        # Acción para mostrar la configuración
+        config_action = Gio.SimpleAction.new("config", None)
+        config_action.connect("activate", self.on_config_action)
+        self.add_action(config_action)
+        print("Acción de configuración añadida")
+        
+        # Acción para mostrar acerca de
+        about_action = Gio.SimpleAction.new("about", None)
+        about_action.connect("activate", self.on_about_action)
+        self.add_action(about_action)
+        print("Acción de acerca de añadida")
+        
+    def on_config_action(self, action, param):
+        print("Acción de configuración activada")
+        self.show_config()
+        
+    def on_about_action(self, action, param):
+        print("Acción de acerca de activada")
+        self.show_about()
+        
+    def clear_main_content(self):
+        for child in self.main_content:
+            self.main_content.remove(child)
+            
+    def show_documents(self, category_id=None):
+        self.clear_main_content()
+        self.current_module = "documents"
+        
+        # Filtrar por categoría si se especifica
+        if category_id is not None and category_id > 0:
+            # Implementar filtrado por categoría
+            pass
+            
+        self.main_content.append(self.document_manager.get_container())
+        
+    def show_editor(self, document=None):
+        self.clear_main_content()
+        self.current_module = "editor"
+        
+        editor = Editor(self, document, self.on_document_saved)
+        self.main_content.append(editor.get_container())
+        
+    def show_config(self, action=None, param=None):
+        self.clear_main_content()
+        self.current_module = "config"
+        self.main_content.append(self.config_manager.get_container())
+        
+    def show_backup(self):
+        self.clear_main_content()
+        self.current_module = "backup"
+        self.main_content.append(self.backup_manager.get_container())
+        
+    def show_about(self, action=None, param=None):
+        self.clear_main_content()
+        self.current_module = "about"
+        self.main_content.append(self.about_manager.get_container())
+        
+    def show_file_manager(self):
+        self.clear_main_content()
+        self.current_module = "file_manager"
+        self.main_content.append(self.file_manager.get_container())
+        
+    def toggle_theme(self, button):
+        # Cambiar el tema
+        current_theme = self.config.get("theme", "dark")
+        new_theme = "light" if current_theme == "dark" else "dark"
+        self.config["theme"] = new_theme
+        
+        # Actualizar el botón
+        if new_theme == "light":
+            button.set_icon_name("weather-clear-night-symbolic")
+        else:
+            button.set_icon_name("weather-clear-symbolic")
+        
+        print(f"Cambiando de tema {current_theme} a {new_theme}")
+        
+        # Guardar la configuración
+        with open(self.config_file, 'w') as f:
+            json.dump(self.config, f, indent=4)
+        
+        # Eliminar el proveedor CSS anterior
+        display = Gdk.Display.get_default()
+        try:
+            Gtk.StyleContext.remove_provider_for_display(display, self.css_provider)
+        except Exception as e:
+            print(f"Error al eliminar proveedor CSS: {e}")
+        
+        # Crear un nuevo proveedor CSS y aplicarlo
+        self.css_provider = Gtk.CssProvider()
+        
+        # Determinar la ruta del archivo CSS
+        css_file = "dexter_dark.css" if new_theme == "dark" else "dexter_light.css"
+        
+        # Buscar el archivo CSS en varias ubicaciones posibles
+        possible_paths = [
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), f'assets/{css_file}'),
+            os.path.join('/usr/share/dexter-organizer', f'assets/{css_file}')
+        ]
+        
+        # Cargar el CSS
+        css_loaded = False
+        for css_path in possible_paths:
+            if os.path.exists(css_path):
+                try:
+                    print(f"Cargando CSS desde: {css_path}")
+                    self.css_provider.load_from_path(css_path)
+                    Gtk.StyleContext.add_provider_for_display(
+                        display,
+                        self.css_provider,
+                        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                    )
+                    css_loaded = True
+                    print(f"CSS cargado correctamente")
+                    break
+                except Exception as e:
+                    print(f"Error al cargar CSS: {e}")
+        
+        if not css_loaded:
+            print("No se pudo cargar el CSS")
+        
+        # Forzar redibujado completo
+        self.queue_draw()
+        
+        # Reiniciar la aplicación para aplicar el tema completamente
+        print("Reiniciando la aplicación para aplicar el tema...")
+        self.get_application().quit()
+        # Iniciar la aplicación nuevamente
+        os.execl(sys.executable, sys.executable, *sys.argv)
+        
+    def on_search_changed(self, entry):
+        search_text = entry.get_text().lower()
+        
+        # Implementar búsqueda de documentos
+        if self.current_module == "documents":
+            # Filtrar documentos según el texto de búsqueda
+            pass
+            
+    def on_category_selected(self, list_box, row):
+        if row is None:
+            return
+            
+        # Usar el atributo en lugar de get_data
+        category_id = getattr(row, 'category_id', 0)
+        self.show_documents(category_id)
+        
+    def on_add_document(self, button):
+        self.show_editor()
+        
+    def on_edit_document(self, button):
+        # Obtener el documento seleccionado del DocumentManager
+        selected_document = self.document_manager.selected_document
+        if selected_document:
+            self.show_editor(selected_document)
+        else:
+            dialog = Gtk.MessageDialog(
+                transient_for=self,
+                message_type=Gtk.MessageType.INFO,
+                buttons=Gtk.ButtonsType.OK,
+                text="Ningún documento seleccionado"
+            )
+            dialog.format_secondary_text("Por favor, selecciona un documento para editar.")
+            dialog.run()
+            dialog.destroy()
+            
+    def on_delete_document(self, button):
+        # Delegar al DocumentManager
+        self.document_manager.on_delete_document(button)
+        
+    def on_document_saved(self, document):
+        if document:
+            # Si es un documento nuevo, añadirlo a la lista
+            documents_file = os.path.join(self.data_path, "documents.json")
+            try:
+                with open(documents_file, 'r') as f:
+                    documents = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                documents = []
+                
+            # Comprobar si el documento ya existe
+            existing_doc = next((d for d in documents if d["id"] == document["id"]), None)
+            if existing_doc:
+                # Actualizar documento existente
+                for i, doc in enumerate(documents):
+                    if doc["id"] == document["id"]:
+                        documents[i] = document
                         break
+            else:
+                # Añadir nuevo documento
+                documents.append(document)
+                
+            # Guardar documentos
+            with open(documents_file, 'w') as f:
+                json.dump(documents, f)
+                
+        # Volver a la vista de documentos
+        self.show_documents()
 
-    def update_selected_document(self, category_name, doc_id):
-        """Actualiza la visualización del documento seleccionado"""
-        # Primero actualizar la categoría seleccionada
-        self.update_selected_category(category_name)
+class DexterOrganizerApp(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id="com.dexteros.organizer",
+                        flags=Gio.ApplicationFlags.FLAGS_NONE)
         
-        # Ahora buscar y marcar el documento seleccionado
-        for category_box in self.categories_box.get_children():
-            for child in category_box.get_children():
-                if isinstance(child, Gtk.Button):
-                    # Verificar si esta es la categoría correcta
-                    is_correct_category = False
-                    for button_child in child.get_children():
-                        if isinstance(button_child, Gtk.Box):
-                            for box_child in button_child.get_children():
-                                if isinstance(box_child, Gtk.Label) and box_child.get_text() == category_name:
-                                    is_correct_category = True
-                                    break
-                    
-                    if is_correct_category and len(category_box.get_children()) > 1:
-                        # Buscar el documento en esta categoría
-                        docs_box = category_box.get_children()[1]
-                        for doc_button in docs_box.get_children():
-                            doc_button.get_style_context().remove_class("selected")
-                            
-                            # Verificar si este es el documento correcto
-                            doc_info = self.categories[category_name][doc_id]
-                            doc_name = doc_info['name']
-                            
-                            for button_child in doc_button.get_children():
-                                if isinstance(button_child, Gtk.Box):
-                                    for box_child in button_child.get_children():
-                                        if isinstance(box_child, Gtk.Label) and box_child.get_text() == doc_name:
-                                            doc_button.get_style_context().add_class("selected")
-                                            break
-    
-    def show_success_dialog(self, message):
-        """Muestra un diálogo de éxito"""
-        dialog = Gtk.MessageDialog(
-            transient_for=self.window,
-            flags=0,
-            message_type=Gtk.MessageType.INFO,
-            buttons=Gtk.ButtonsType.OK,
-            text=message
-        )
-        dialog.run()
-        dialog.destroy()
-    
-    def show_error_dialog(self, message):
-        """Muestra un diálogo de error"""
-        dialog = Gtk.MessageDialog(
-            transient_for=self.window,
-            flags=0,
-            message_type=Gtk.MessageType.ERROR,
-            buttons=Gtk.ButtonsType.OK,
-            text=message
-        )
-        dialog.run()
-        dialog.destroy()
-    
-    def show_info_dialog(self, message):
-        """Muestra un diálogo informativo"""
-        dialog = Gtk.MessageDialog(
-            transient_for=self.window,
-            flags=0,
-            message_type=Gtk.MessageType.INFO,
-            buttons=Gtk.ButtonsType.OK,
-            text=message
-        )
-        dialog.run()
-        dialog.destroy()
+    def do_activate(self):
+        win = self.props.active_window
+        if not win:
+            win = DexterOrganizer(application=self)
+        win.present()
 
 def main():
-    app = DexterOrganizer()
+    app = DexterOrganizerApp()
     return app.run(sys.argv)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
