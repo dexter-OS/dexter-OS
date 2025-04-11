@@ -1,277 +1,66 @@
-/* 
- * Dexter Organizer - Hoja de estilos
- * Autor: Victor oubiña Faubel - oubinav78@gmail.com
- */
-
-/* Estilos globales */
-* {
-    transition: all 200ms ease;
-}
-
 window {
-    background-color: #fafafa;
+    background-color: #f5f5f5;
+    color: #333333;
+    border-radius: 20px;
 }
 
-/* Ventana principal */
-#main-window {
-    border-radius: 12px;
+headerbar {
+    background-color: #e0e0e0;
+    border-radius: 20px 20px 0 0;
 }
 
-/* Panel lateral */
-.sidebar {
-    background-color: #fafafa;
-    color: #6b6b6b;
-    padding: 0;
-    border-bottom-left-radius: 12px;
+button {
+    background-color: #d0d0d0;
+    color: #333333;
+    border-radius: 8px;
+    border: none;
+    padding: 8px;
 }
 
-.sidebar-header {
-    background-color: #fafafa;
-    padding: 10px;
-    border-bottom: 2px solid transparent;
-    /* Añada el gradiente como una decoración */
-    background-image: linear-gradient(to right, #8432e9, #37e6eb);
-    background-position: 0 100%;
-    background-size: 100% 2px;
-    background-repeat: no-repeat;
+button:hover {
+    background-color: #c0c0c0;
 }
 
-.app-title {
-    color: black;
+searchentry {
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    color: #333333;
+    border: 1px solid #cccccc;
+    padding: 6px;
+}
+
+.title {
     font-size: 16px;
-    font-weight: bold;
+    color: #2a6496;
 }
 
-.app-subtitle {
-    color: rgba(107, 107, 107, 1);
-    font-size: 11px;
+.subtitle {
+    font-size: 12px;
+    color: #555555;
     font-style: italic;
 }
 
-/* Categorías */
-.categories-box {
-    background-color: #fafafa;
-    border-bottom-left-radius: 12px;
+box.sidebar {
+    background-color: #e0e0e0;
+    padding: 12px;
+}
+
+listbox {
+    background-color: transparent;
+}
+
+listbox row {
+    padding: 8px;
+    border-radius: 8px;
+}
+
+listbox row:selected {
+    background-color: #c0c0c0;
 }
 
 .category-box {
-    margin-bottom: 5px;
-}
-
-.category-button {
-    background-color: rgba(230, 230, 230, 1);
-    color: black;
-    border-radius: 6px;
-    margin: 4px;
-    padding: 3px;
-}
-
-.category-button:hover {
-    background-color: rgba(230, 230, 230, 1);
-}
-
-.category-button.selected {
-    background-color: rgba(230, 230, 230, 1);
-    border-left: 3px solid #00b8d4;
-    background-image: linear-gradient(to right, #115677, alpha(#115677, 0) 30px);
-}
-
-/* Documentos */
-.documents-box {
-    background-color: transparent;
-}
-
-.document-button {
-    background-color: transparent;
-    color: black;
-    border-radius: 6px;
-    margin: 4px 14px;
-    padding: 2px;
-}
-
-.document-button:hover {
-    background-color: rgba(230, 230, 230, 1);
-}
-
-.document-button.selected {
-    color: red;
-}
-
-/* Panel principal */
-.main-panel {
     background-color: #ffffff;
-    color: black;
-    border-bottom-right-radius: 12px;
-}
-
-/* Barra de herramientas */
-.menu-button {
-    background-color: transparent;
-    padding: 5px 5px;
-    border: none;
-}
-
-.menu-button:hover {
-    background-color: rgba(230, 230, 230, 1);
-}
-
-/* Barra de herramientas de documento */
-.doc-toolbar {
-    background-color: #34495e;
-    border-bottom: 1px solid #d4d4d4;
-    padding: 8px 15px;
-}
-
-.view-mode-button,
-.save-button {
-    border-radius: 6px;
-    padding: 5px 10px;
-    background-color: #3498db;
-    color: black;
-    border: none;
-}
-
-.view-mode-button:hover,
-.save-button:hover {
-    background-color: #2980b9;
-}
-
-.view-mode-button:active,
-.save-button:active {
-    background-color: #1c6ea4;
-}
-
-/* Vista de documento */
-.document-text-view {
-    font-family: monospace;
-    padding: 10px;
-}
-
-.document-text-view text {
-    background-color: black;
-}
-
-/* Grid de documentos */
-.document-grid-item {
-    background-color: black;
     border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.document-grid-item:hover {
-    background-color: #ecf0f1;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-/* Diálogos */
-.dialog {
-    border-radius: 10px;
-}
-
-/* Estilo para los botones en general */
-button {
-    border-radius: 6px;
-}
-
-/* Scrollbars */
-scrollbar {
-    background-color: transparent;
-}
-
-scrollbar slider {
-    background-color: #bdc3c7;
-    border-radius: 10px;
-    min-width: 6px;
-    min-height: 6px;
-}
-
-scrollbar slider:hover {
-    background-color: #95a5a6;
-}
-
-scrollbar slider:active {
-    background-color: #7f8c8d;
-}
-
-/* Configuración */
-.config-dialog {
-    border-radius: 10px;
-}
-
-/* Mensajes y Alerts */
-messagedialog {
-    border-radius: 10px;
-}
-
-/* Inputs */
-entry {
-    border-radius: 4px;
-    padding: 5px;
-    border: 1px solid #bdc3c7;
-}
-
-entry:focus {
-    border-color: #3498db;
-}
-
-/* Botones de radio y check */
-checkbutton,
-radiobutton {
-    padding: 5px;
-}
-
-checkbutton:checked,
-radiobutton:checked {
-    color: #3498db;
-}
-
-/* Popover */
-popover {
-    background-color: #fafafa;
-    border-radius: 6px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    padding: 5px;
-    border: 1px solid #00b8d4;
-}
-
-modelbutton {
-    background-color: transparent;
-    color: black;
-    border-radius: 6px;
-    padding: 5px;
-    border: none;
-}
-
-modelbutton:hover {
-    background-color: rgba(230, 230, 230, 1);
-}
-
-/* Spinners y progreso */
-progressbar trough {
-    background-color: #ecf0f1;
-    border-radius: 4px;
-    min-height: 6px;
-}
-
-progressbar progress {
-    background-color: #3498db;
-    border-radius: 4px;
-}
-
-spinner {
-    color: #3498db;
-}
-
-/* Boton Temas */
-#theme-toggle {
-    background-color: transparent;
-    padding: 5px 5px;
-    border-radius: 8px;
-    border: 1px solid #00b8d4;
-    min-width: 60px;
-}
-
-#theme-toggle .sun-icon {
-    margin-left: 10px;
+    padding: 12px;
+    margin: 4px;
 }

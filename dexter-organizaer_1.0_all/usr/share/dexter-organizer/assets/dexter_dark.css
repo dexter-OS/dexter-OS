@@ -1,313 +1,66 @@
-/* =================================
-           ESTILOS GENERALES
-   ================================= */
-* {
-    transition: all 200ms ease;
-}
-
 window {
-    background-color: #16181d;
-    border-bottom-right-radius: 12px;
+    background-color: #1a1b26;
+    color: #a9b1d6;
+    border-radius: 20px;
 }
 
-#main-window {
-    border-radius: 12px;
+headerbar {
+    background-color: #24283b;
+    border-radius: 20px 20px 0 0;
 }
 
-/* =================================
-            PANEL IZQUIERDO
-   ================================= */
-/* Sidebar Completo */
-.sidebar {
-    background-color: #16181d;
-    color: white;
-    border-bottom-left-radius: 12px;
+button {
+    background-color: #414868;
+    color: #a9b1d6;
+    border-radius: 8px;
+    border: none;
+    padding: 8px;
 }
 
-/* Titulos */
-.app-title {
-    color: white;
+button:hover {
+    background-color: #565f89;
+}
+
+searchentry {
+    background-color: #1a1b26;
+    border-radius: 8px;
+    color: #a9b1d6;
+    border: 1px solid #414868;
+    padding: 6px;
+}
+
+.title {
     font-size: 16px;
-    font-weight: bold;
+    color: #7aa2f7;
 }
 
-.app-subtitle {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 11px;
+.subtitle {
+    font-size: 12px;
+    color: #a9b1d6;
     font-style: italic;
 }
 
-/* Separador */
-.sidebar-header {
-    background-color: #16181d;
-    padding: 10px 5px;
-    border-bottom: 2px solid transparent;
-    /* Añada el gradiente como una decoración */
-    background-image: linear-gradient(to right, #8432e9, #37e6eb);
-    background-position: 0 100%;
-    background-size: 100% 2px;
-    background-repeat: no-repeat;
+box.sidebar {
+    background-color: #24283b;
+    padding: 12px;
 }
 
-/* Botones */
-.sidebar-action-button {
+listbox {
     background-color: transparent;
-    border: none;
-    padding: 10px 5px;
-    border-radius: 6px;
 }
 
-.sidebar-action-button:hover {
-    background-color: #34495e;
-}
-
-.sidebar-action-button:active {
-    background-color: #34495e;
-}
-
-/* Categorías */
-.categories-box {
-    background-color: #16181d;
+listbox row {
     padding: 8px;
-    border-bottom-left-radius: 12px;
+    border-radius: 8px;
+}
+
+listbox row:selected {
+    background-color: #414868;
 }
 
 .category-box {
-    margin-bottom: 5px;
-}
-
-.category-button {
-    background-color: rgba(37, 41, 50, 1);
-    color: white;
-    border-radius: 6px;
+    background-color: #1a1b26;
+    border-radius: 8px;
+    padding: 12px;
     margin: 4px;
-    padding: 3px;
-}
-
-.category-button:hover {
-    background-color: rgba(37, 41, 50, 1);
-}
-
-.category-button.selected {
-    background-color: rgba(37, 41, 50, 1);
-    border-left: 3px solid #00b8d4;
-    background-image: linear-gradient(to right, #115677, alpha(#115677, 0) 30px);
-}
-
-/* Documentos */
-.documents-box {
-    background-color: transparent;
-}
-
-.document-button {
-    background-color: transparent;
-    color: white;
-    border-radius: 6px;
-    margin: 4px 14px;
-    padding: 2px;
-}
-
-.document-button:hover {
-    background-color: #34495e;
-}
-
-.document-button.selected {
-    color: red;
-}
-
-/* =================================
-             PANEL DERECHO
-   ================================= */
-/* Panel principal */
-.main-panel {
-    background-color: #23262e;
-    color: white;
-    border-bottom-right-radius: 12px;
-}
-
-.menu-button {
-    background-color: transparent;
-    color: white;
-    padding: 5px 5px;
-    border: none;
-}
-
-.menu-button:hover {
-    background-color: blue;
-}
-
-/* Barra de herramientas de documento */
-.doc-toolbar {
-    background-color: #16181d;
-    padding: 5px 5px;
-    border-bottom: 2px solid transparent;
-    /* Añada el gradiente como una decoración */
-    background-image: linear-gradient(to right, #8432e9, #37e6eb);
-    background-position: 0 100%;
-    background-size: 100% 2px;
-    background-repeat: no-repeat;
-}
-
-.view-mode-button,
-.save-button {
-    background-color: rgba(37, 41, 50, 1);
-    border-left: 3px solid #00b8d4;
-    background-image: linear-gradient(to right, #115677, alpha(#115677, 0) 30px);
-}
-
-.view-mode-button:hover,
-.save-button:hover {
-    background-color: #2980b9;
-}
-
-/* Vista de documento */
-.document-text-view {
-    font-family: monospace;
-    padding: 10px;
-}
-
-.document-text-view text {
-    background-color: #23262e;
-}
-
-/* Grid de documentos */
-.document-grid-item {
-    background-color: white;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.document-grid-item:hover {
-    background-color: #ecf0f1;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-/* Diálogos */
-.dialog {
-    border-radius: 10px;
-}
-
-/* Estilo para los botones en general */
-button {
-    border-radius: 6px;
-}
-
-/* Scrollbars */
-scrollbar {
-    background-color: transparent;
-}
-
-scrollbar slider {
-    background-color: #bdc3c7;
-    border-radius: 10px;
-    min-width: 6px;
-    min-height: 6px;
-}
-
-scrollbar slider:hover {
-    background-color: #95a5a6;
-}
-
-scrollbar slider:active {
-    background-color: #7f8c8d;
-}
-
-/* Configuración */
-.config-dialog {
-    border-radius: 10px;
-}
-
-/* Mensajes y Alerts */
-messagedialog {
-    border-radius: 10px;
-}
-
-/* Inputs */
-entry {
-    border-radius: 4px;
-    padding: 5px;
-    border: 1px solid #bdc3c7;
-}
-
-entry:focus {
-    border-color: #3498db;
-}
-
-/* Botones de radio y check */
-checkbutton,
-radiobutton {
-    padding: 5px;
-}
-
-checkbutton:checked,
-radiobutton:checked {
-    color: #3498db;
-}
-
-/* Popover */
-popover {
-    background-color: #16181d;
-    border-radius: 6px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    padding: 5px;
-    border: 1px solid #34495e;
-}
-
-modelbutton {
-    background-color: transparent;
-    color: white;
-    border-radius: 6px;
-    padding: 5px;
-    border: none;
-}
-
-modelbutton:hover {
-    background-color: rgba(37, 41, 50, 1);
-}
-
-/* Spinners y progreso */
-progressbar trough {
-    background-color: #ecf0f1;
-    border-radius: 4px;
-    min-height: 6px;
-}
-
-progressbar progress {
-    background-color: #3498db;
-    border-radius: 4px;
-}
-
-spinner {
-    color: #3498db;
-}
-
-/* Boton Temas */
-#theme-toggle {
-    background-color: transparent;
-    padding: 5px 5px;
-    border-radius: 8px;
-    border: 1px solid #34495e;
-    min-width: 60px;
-}
-
-#theme-toggle image {
-    opacity: 0.5;
-    margin: 0 3px;
-}
-
-#theme-toggle .moon-icon {
-    opacity: 0.5;
-}
-
-#theme-toggle .moon-icon {
-    margin-left: 10px;
-}
-
-#theme-toggle:checked .moon-icon {
-    opacity: 0.5;
-}
-
-#theme-toggle:not(:checked) .moon-icon {
-    opacity: 1;
 }
