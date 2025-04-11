@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script de inicio para Dexter-Organizer
-
-# Ejecutar desde la ubicación correcta
-python3 /usr/share/dexter-organizer/dexter-organizer.py "$@"
+# Script wrapper para DexterOrganizer
+# Cambia al directorio de instalación y ejecuta la aplicación
+cd "/usr/share/dexter-organizer"
+python3 "/usr/share/dexter-organizer/dexter-organizer.py" "$@"
