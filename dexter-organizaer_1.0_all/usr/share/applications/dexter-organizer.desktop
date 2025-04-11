@@ -1,10 +1,9 @@
 [Desktop Entry]
-Version=1.0
-Type=Application
-Name=Dexter Organizer
-Comment=Organizador de documentos
+Name=DexterOrganizer
+Comment=Aplicación para organizar documentos
 Exec=dexter-organizer
 Icon=dexter-organizer
 Terminal=false
-Categories=Utility;Office;
-Keywords=documentos;organizador;archivos;
+Type=Application
+Categories=Office;Utility;
+Keywords=document;organizer;
