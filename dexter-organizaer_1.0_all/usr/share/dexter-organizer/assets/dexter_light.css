@@ -1,66 +1,218 @@
+/* ========================================
+   AJUSTES GENERALES PARA TODO
+   ======================================== */
+/* Colores principales */
+@define-color bg_color #ffffff;
+@define-color fg_color #2f2f34;
+@define-color sidebar_bg_color #ebebed;
+@define-color sidebar_fg_color #67676b;
+@define-color header_bg_color #ffffff;
+@define-color header_fg_color #2f2f34;
+
+/* App completa */
 window {
-    background-color: #f5f5f5;
-    color: #333333;
+    background-color: @bg_color;
+    color: @fg_color;
     border-radius: 20px;
 }
 
-headerbar {
-    background-color: #e0e0e0;
-    border-radius: 20px 20px 0 0;
+decoration {
+    border-radius: 20px;
 }
 
-button {
-    background-color: #d0d0d0;
-    color: #333333;
-    border-radius: 8px;
-    border: none;
-    padding: 8px;
+#main-container {
+    border: 1.5px solid gray;
+    border-radius: 20px;
+    margin: 0;
+    padding: 0;
 }
 
-button:hover {
-    background-color: #c0c0c0;
+/* ========================================
+   AJUSTES PARA HEADER Y SIDEBAR IZQUIERDO
+   ======================================== */
+/* Reglas para el encabezado */
+.header-left {
+    background-color: @sidebar_bg_color;
+    color: @sidebar_fg_color;
+    min-height: 28px;
+    border-top-left-radius: 20px;
+    border-right: 1px solid alpha(@theme_fg_color, 0.15);
+    margin: 0;
+    padding: 0;
 }
 
-searchentry {
-    background-color: #f5f5f5;
-    border-radius: 8px;
-    color: #333333;
-    border: 1px solid #cccccc;
-    padding: 6px;
+#left-container {
+    margin: 0;
+    padding: 0;
 }
 
-.title {
-    font-size: 16px;
-    color: #2a6496;
+#logo-label {
+    background-color: #d9d9da;
+    color: black;
+    font-weight: bold;
+    margin-left: 10px;
+    border-radius: 15px;
+    border-bottom: 3px solid #00b8d4;
 }
 
-.subtitle {
-    font-size: 12px;
-    color: #555555;
-    font-style: italic;
+#edit-menu-button {
+    background: transparent;
+    color: black;
+    border-radius: 50%;
+    min-height: 24px;
+    min-width: 24px;
+    padding: 5px;
+    margin: 3px;
 }
 
-box.sidebar {
-    background-color: #e0e0e0;
-    padding: 12px;
+#edit-menu-button:hover {
+    background-color: #d9d9da;
 }
 
-listbox {
+/* Reglas para el sidebar */
+#sidebar-container {
+    background-color: @sidebar_bg_color;
+    color: @sidebar_fg_color;
+    border-bottom-left-radius: 20px;
+    border-right: 1px solid alpha(@theme_fg_color, 0.15);
+    margin: 0;
+    padding: 0;
+}
+
+#sidebar-header {
+    background-color: @sidebar_bg_color;
+    font-weight: bold;
+}
+
+#sidebar-options {
+    background-color: @sidebar_bg_color;
+    font-weight: bold;
+}
+
+/* ========================================
+   AJUSTES PARA HEADER Y CONTENEDOR DERECHO
+   ======================================== */
+/* Reglas para el encabezado */
+.header-right {
+    background-color: @header_bg_color;
+    color: @header_fg_color;
+    min-height: 28px;
+    border-top-right-radius: 20px;
+}
+
+/* Reglas para buscador y botones */
+#nav-box button {
+    padding: 5px 5px;
+    border-radius: 15px;
+    margin: 3px;
+}
+
+#search-entry {
+    background-color: #ebebeb;
+    color: #67676b;
+    border-radius: 15px;
+    min-width: 250px;
+    min-height: 24px;
+    padding: 5px;
+    margin: 5px;
+}
+
+#theme-button,
+#options-button,
+#close-button {
     background-color: transparent;
+    color: black;
+    border-radius: 50%;
+    min-height: 24px;
+    min-width: 24px;
 }
 
-listbox row {
-    padding: 8px;
-    border-radius: 8px;
+#theme-button:hover,
+#options-button:hover,
+#close-button:hover {
+    background-color: #d9d9da;
 }
 
-listbox row:selected {
-    background-color: #c0c0c0;
+/* ========================================
+   AJUSTES PARA MÓDULO DE INICIO
+   ======================================== */
+.start-title {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #27ae60;
 }
 
-.category-box {
-    background-color: #ffffff;
-    border-radius: 8px;
-    padding: 12px;
-    margin: 4px;
+.start-description {
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.start-features {
+    margin: 15px 30px;
+    padding: 15px;
+    border-radius: 10px;
+    background-color: alpha(@theme_bg_color, 0.3);
+    border: 1px solid #00b8d4;
+}
+
+.start-instruction {
+    font-size: 16px;
+    font-style: italic;
+    margin-top: 20px;
+}
+
+/* ========================================
+   AJUSTES PARA MÓDULO DE ABOUT
+   ======================================== */
+#about-frame {
+    background: #d9d9da;
+    border-radius: 20px;
+    border: 1px solid #00b8d4;
+    box-shadow: none;
+    padding: 0;
+}
+
+#about-notebook {
+    background: transparent;
+    color: black;
+    border-radius: 20px;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+#about-notebook > * {
+    background: #ebebeb;
+    border-radius: 0 0 20px 20px;
+    border: none;
+}
+
+#about-notebook > header,
+#about-notebook > header tab {
+    background: #d9d9da;
+    color: black;
+    min-height: 24px;
+    margin: 5px 0 5px 0;
+    border: none;
+    border-radius: 20px 20px 0 0;
+    box-shadow: none;
+    padding: 0 8px;
+}
+
+#about-notebook tab {
+    background: transparent;
+    border-radius: 20px;
+    border: none;
+    margin: 2px 4px;
+    padding: 3px 16px;
+}
+
+#about-notebook tab:checked,
+#about-notebook tab:selected {
+    background: #ebebeb;
+    color: black;
+    border: none;
+    border-radius: 15px;
+    border-bottom: 3px solid #00b8d4;
 }
